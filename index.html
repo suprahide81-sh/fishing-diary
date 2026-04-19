@@ -6,220 +6,151 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#181814">
+<meta name="theme-color" content="#0d1a0f">
 <title>釣り日記</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Black+Han+Sans&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --ink: #181814;
-  --paper: #f3ede3;
-  --paper2: #e8dece;
-  --paper3: #dfd4c0;
-  --water: #1e6577;
-  --water-l: #3d8fa3;
-  --water-p: #cde8f0;
-  --moss: #3d5e38;
-  --moss-l: #6b9465;
-  --sand: #c4a05a;
-  --rec: #bf3030;
-  --shadow: rgba(24,24,20,0.13);
+  --bg: #0d1a0f;
+  --bg2: #142018;
+  --bg3: #1c2e20;
+  --panel: #1a2a1e;
+  --border: rgba(120,180,80,0.18);
+  --green: #5aad3f;
+  --green-l: #7ed45a;
+  --green-p: rgba(90,173,63,0.13);
+  --water: #2a7a5c;
+  --water-l: #3daa80;
+  --water-p: rgba(42,122,92,0.2);
+  --amber: #d4820a;
+  --amber-l: #f0a830;
+  --amber-p: rgba(212,130,10,0.15);
+  --red: #c0392b;
+  --text: #e8f0e0;
+  --text2: rgba(232,240,224,0.55);
+  --text3: rgba(232,240,224,0.28);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; overflow: hidden; }
+html { height: 100%; }
 body {
-  background: var(--paper);
-  font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Zen Kaku Gothic New', sans-serif;
   height: 100%;
   height: -webkit-fill-available;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* subtle texture */
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(90,173,63,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(42,122,92,0.08) 0%, transparent 60%);
 }
 
 /* ===== HEADER ===== */
 .hdr {
-  background: var(--ink);
-  color: var(--paper);
-  padding: 12px 16px 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  position: relative;
 }
-.hdr-l { display: flex; flex-direction: column; gap: 2px; }
+.hdr::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  opacity: 0.4;
+}
+.hdr-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hdr-icon { font-size: 22px; }
 .hdr-title {
-  font-family: 'Space Mono', monospace;
-  font-size: 13px;
-  letter-spacing: 0.15em;
-  font-weight: 700;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  color: var(--green-l);
+  text-shadow: 0 0 20px rgba(90,173,63,0.4);
 }
 .hdr-date {
   font-family: 'Space Mono', monospace;
   font-size: 10px;
-  opacity: 0.45;
-  letter-spacing: 0.06em;
+  color: var(--text3);
+  letter-spacing: 0.08em;
 }
-.hdr-r { display: flex; gap: 8px; align-items: center; }
-.icon-btn {
-  background: rgba(255,255,255,0.1);
-  border: none;
-  color: var(--paper);
-  border-radius: 8px;
+.hdr-actions { display: flex; gap: 6px; }
+.hdr-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: 7px;
   padding: 6px 10px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.icon-btn:active { background: rgba(255,255,255,0.2); }
-
-/* ===== INPUT AREA ===== */
-.inp-wrap {
-  background: var(--paper2);
-  border-bottom: 1px solid rgba(24,24,20,0.1);
-  padding: 10px 12px;
-  flex-shrink: 0;
-}
-.inp-row { display: flex; gap: 8px; align-items: flex-end; }
-.inp-box {
-  flex: 1;
-  background: var(--paper);
-  border: 1.5px solid rgba(24,24,20,0.16);
-  border-radius: 12px;
-  padding: 10px 13px;
-  font-family: 'Zen Kaku Gothic New', sans-serif;
   font-size: 15px;
-  color: var(--ink);
-  resize: none;
-  min-height: 48px;
-  max-height: 110px;
-  line-height: 1.5;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.inp-box:focus {
-  border-color: var(--water);
-  box-shadow: 0 0 0 3px rgba(30,101,119,0.08);
-}
-.inp-box::placeholder { color: rgba(24,24,20,0.32); font-size: 13px; }
-.mic-btn {
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: var(--water);
-  color: white;
-  font-size: 20px;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(30,101,119,0.35);
-  transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
-  position: relative;
+  transition: all 0.2s;
 }
-.mic-btn:active { transform: scale(0.92); }
-.mic-btn.rec {
-  background: var(--rec);
-  box-shadow: 0 3px 18px rgba(191,48,48,0.45);
-  animation: mic-pulse 1.4s ease-in-out infinite;
-}
-@keyframes mic-pulse {
-  0%,100% { box-shadow: 0 3px 18px rgba(191,48,48,0.45); }
-  50% { box-shadow: 0 3px 28px rgba(191,48,48,0.65); }
-}
-.send-btn {
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: var(--moss);
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(61,94,56,0.3);
-  transition: transform 0.15s;
-}
-.send-btn:active { transform: scale(0.92); }
-.send-btn:disabled { background: #aaa; box-shadow: none; }
-.inp-hint {
-  margin-top: 6px;
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  opacity: 0.3;
-  letter-spacing: 0.05em;
-  display: flex;
-  gap: 10px;
-}
-.rec-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 5px;
-  font-size: 11px;
-  color: var(--rec);
-  font-weight: 700;
-  display: none;
-}
-.rec-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--rec);
-  animation: blink 0.9s ease-in-out infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-.interim-txt { color: var(--water); font-size: 12px; font-style: italic; opacity: 0.8; }
+.hdr-btn:active { background: var(--green-p); color: var(--green-l); border-color: var(--green); }
 
 /* ===== TABS ===== */
 .tabs {
   display: flex;
-  background: var(--paper);
-  border-bottom: 1.5px solid rgba(24,24,20,0.08);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .tab {
   flex: 1;
-  padding: 9px 4px 8px;
+  padding: 9px 2px 8px;
   border: none;
   background: transparent;
+  color: var(--text3);
   font-family: 'Zen Kaku Gothic New', sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--ink);
-  opacity: 0.35;
   cursor: pointer;
-  border-bottom: 2.5px solid transparent;
-  margin-bottom: -1.5px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
+  letter-spacing: 0.02em;
 }
-.tab.on { opacity: 1; border-bottom-color: var(--water); color: var(--water); }
+.tab.on {
+  color: var(--green-l);
+  border-bottom-color: var(--green);
+  background: rgba(90,173,63,0.05);
+}
 .bdg {
-  background: var(--water);
-  color: white;
-  border-radius: 9px;
+  background: var(--green);
+  color: var(--bg);
+  border-radius: 8px;
   font-family: 'Space Mono', monospace;
   font-size: 9px;
+  font-weight: 700;
   padding: 1px 5px;
   min-width: 16px;
   text-align: center;
-  transition: background 0.2s;
 }
-.bdg.new { background: var(--rec); animation: pop 0.3s ease; }
-@keyframes pop { 0%{transform:scale(0.5)} 70%{transform:scale(1.15)} 100%{transform:scale(1)} }
+.bdg.pop { animation: bdg-pop 0.3s ease; }
+@keyframes bdg-pop { 0%{transform:scale(0.4)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
 
-/* ===== CONTENT ===== */
+/* ===== SCROLL CONTENT ===== */
 .content {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 12px;
-  background: var(--paper);
-  background-image: repeating-linear-gradient(
-    0deg, transparent, transparent 27px,
-    rgba(30,101,119,0.055) 27px, rgba(30,101,119,0.055) 28px
-  );
+  padding: 12px 12px 8px;
+  /* space for bottom bar */
+  padding-bottom: 140px;
 }
 .view { display: none; }
 .view.on { display: block; }
@@ -228,227 +159,356 @@ body {
 .sec-hd {
   font-family: 'Space Mono', monospace;
   font-size: 9px;
-  letter-spacing: 0.14em;
-  opacity: 0.32;
+  letter-spacing: 0.16em;
+  color: var(--text3);
   text-transform: uppercase;
-  border-bottom: 1px solid rgba(24,24,20,0.08);
-  padding-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
 }
+.sec-hd::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 12px;
+  background: var(--green);
+  border-radius: 2px;
+}
+.sec-hd::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
-/* ===== DATA FIELDS ===== */
+/* ===== DATA GRID ===== */
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .card {
-  background: var(--paper2);
-  border: 1.5px solid rgba(24,24,20,0.09);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 9px 10px;
-  transition: border-color 0.35s, box-shadow 0.35s;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 .card.full { grid-column: 1 / -1; }
 .card.lit {
-  border-color: var(--water-l);
-  box-shadow: 0 0 0 3px rgba(30,101,119,0.1);
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(90,173,63,0.15), inset 0 0 12px rgba(90,173,63,0.05);
 }
 .card-lbl {
   font-family: 'Space Mono', monospace;
-  font-size: 9px;
+  font-size: 8px;
   letter-spacing: 0.1em;
-  opacity: 0.42;
+  color: var(--text3);
   text-transform: uppercase;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
-.tags { display: flex; flex-wrap: wrap; gap: 3px; min-height: 22px; align-items: flex-start; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; align-items: flex-start; }
 .tag {
-  background: var(--water-p);
-  color: var(--water);
+  background: var(--green-p);
+  color: var(--green-l);
+  border: 1px solid rgba(90,173,63,0.3);
   border-radius: 5px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  user-select: none;
-  animation: tag-in 0.22s ease;
-  transition: opacity 0.15s;
+  animation: tag-in 0.2s ease;
 }
 .tag:active { opacity: 0.5; }
-@keyframes tag-in { from{transform:scale(0.6);opacity:0} to{transform:scale(1);opacity:1} }
-.tag-empty { font-size: 12px; opacity: 0.2; line-height: 22px; }
+@keyframes tag-in { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+.tag-empty { font-size: 11px; color: var(--text3); line-height: 22px; }
 
 /* ===== FISH LOG ===== */
-.fish-list, .memo-list { display: flex; flex-direction: column; gap: 8px; }
+.list { display: flex; flex-direction: column; gap: 8px; }
 .fish-item {
-  background: var(--water-p);
-  border: 1.5px solid rgba(30,101,119,0.15);
-  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid rgba(42,122,92,0.3);
+  border-left: 3px solid var(--water-l);
+  border-radius: 0 10px 10px 0;
   padding: 10px 12px;
   display: flex;
   align-items: center;
   gap: 10px;
   animation: item-in 0.22s ease;
+  position: relative;
 }
-@keyframes item-in { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
-.fish-emoji { font-size: 22px; flex-shrink: 0; }
+@keyframes item-in { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+.fish-ico { font-size: 24px; flex-shrink: 0; }
 .fish-sz {
-  font-family: 'Space Mono', monospace;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--water);
-  min-width: 56px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 26px;
+  color: var(--water-l);
+  min-width: 58px;
   text-align: center;
   flex-shrink: 0;
   line-height: 1;
+  text-shadow: 0 0 16px rgba(61,170,128,0.35);
 }
-.fish-sz small { font-size: 11px; font-weight: 400; display: block; }
+.fish-sz small { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 400; display: block; color: var(--text3); }
 .fish-info { flex: 1; min-width: 0; }
-.fish-lure { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fish-meta { font-family: 'Space Mono', monospace; font-size: 10px; opacity: 0.45; margin-top: 2px; }
-.fish-note { font-size: 11px; opacity: 0.6; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fish-lure { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fish-meta { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text3); margin-top: 3px; }
+.fish-note { font-size: 11px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ===== MEMO ===== */
 .memo-item {
-  background: var(--paper2);
-  border: 1.5px solid rgba(24,24,20,0.09);
-  border-left: 3px solid var(--sand);
+  background: var(--panel);
+  border: 1px solid rgba(212,130,10,0.2);
+  border-left: 3px solid var(--amber);
   border-radius: 0 10px 10px 0;
-  padding: 9px 36px 9px 12px;
+  padding: 10px 40px 10px 12px;
   animation: item-in 0.22s ease;
   position: relative;
 }
-.memo-time { font-family: 'Space Mono', monospace; font-size: 9px; opacity: 0.38; margin-bottom: 3px; }
-.memo-txt { font-size: 13px; line-height: 1.65; }
+.memo-time { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--amber); margin-bottom: 3px; letter-spacing: 0.06em; }
+.memo-txt { font-size: 13px; line-height: 1.65; color: var(--text); }
 
-/* ===== DEL BUTTON ===== */
+/* ===== DEL ===== */
 .del-btn {
   background: none; border: none; cursor: pointer;
-  font-size: 15px; opacity: 0.25; padding: 6px;
-  flex-shrink: 0;
-  transition: opacity 0.2s;
+  font-size: 14px; color: var(--text3); padding: 6px;
+  flex-shrink: 0; transition: color 0.2s;
 }
-.del-btn:active { opacity: 0.8; }
+.del-btn:active { color: var(--red); }
 .del-abs { position: absolute; top: 6px; right: 4px; }
 
 /* ===== EMPTY ===== */
 .empty {
   text-align: center;
-  padding: 36px 20px;
-  opacity: 0.32;
+  padding: 40px 20px;
+  color: var(--text3);
   font-size: 13px;
   line-height: 2;
 }
-.empty-icon { font-size: 36px; display: block; margin-bottom: 8px; opacity: 0.6; }
+.empty-ico { font-size: 40px; display: block; margin-bottom: 10px; }
 
-/* ===== SUMMARY VIEW ===== */
-.summary-box {
-  background: var(--paper2);
-  border: 1.5px solid rgba(24,24,20,0.09);
+/* ===== SUMMARY ===== */
+.sum-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
-.summary-title { font-weight: 900; font-size: 14px; margin-bottom: 10px; }
-.summary-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(24,24,20,0.07); font-size: 13px; }
-.summary-row:last-child { border-bottom: none; }
-.summary-key { opacity: 0.55; }
-.summary-val { font-weight: 700; text-align: right; max-width: 60%; }
+.sum-title { font-family: 'Black Han Sans', sans-serif; font-size: 14px; color: var(--green-l); margin-bottom: 10px; letter-spacing: 0.05em; }
+.sum-row {
+  display: flex; justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.sum-row:last-child { border-bottom: none; }
+.sum-key { color: var(--text3); }
+.sum-val { font-weight: 700; color: var(--text); text-align: right; max-width: 58%; }
 .export-btn {
-  width: 100%;
-  padding: 13px;
-  background: var(--ink);
-  color: var(--paper);
-  border: none;
-  border-radius: 10px;
-  font-family: 'Zen Kaku Gothic New', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
+  width: 100%; padding: 14px;
+  background: var(--green);
+  color: var(--bg);
+  border: none; border-radius: 10px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 15px; letter-spacing: 0.08em;
   cursor: pointer;
-  letter-spacing: 0.05em;
+  box-shadow: 0 4px 20px rgba(90,173,63,0.3);
   transition: opacity 0.2s;
 }
-.export-btn:active { opacity: 0.7; }
+.export-btn:active { opacity: 0.75; }
+
+/* ===================================================
+   BOTTOM BAR — 固定マイク＋入力エリア
+=================================================== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 10px 12px 18px;
+  flex-shrink: 0;
+  z-index: 50;
+}
+.bottom-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  opacity: 0.35;
+}
+
+/* テキスト入力行 */
+.inp-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 10px;
+}
+.inp-box {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  resize: none;
+  min-height: 44px;
+  max-height: 90px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.inp-box:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(90,173,63,0.12);
+}
+.inp-box::placeholder { color: var(--text3); font-size: 12px; }
+.send-btn {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--green);
+  background: var(--green-p);
+  color: var(--green-l);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.send-btn:active { background: var(--green); color: var(--bg); }
+.send-btn:disabled { border-color: var(--border); color: var(--text3); background: transparent; cursor: default; }
+
+/* マイクボタン大 */
+.mic-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mic-btn {
+  flex: 1;
+  height: 54px;
+  border-radius: 12px;
+  border: 2px solid var(--green);
+  background: var(--green-p);
+  color: var(--green-l);
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 0 20px rgba(90,173,63,0.12);
+}
+.mic-btn .mic-ico { font-size: 22px; }
+.mic-btn:active { opacity: 0.75; }
+.mic-btn.rec {
+  background: rgba(192,57,43,0.15);
+  border-color: var(--red);
+  color: #e06060;
+  box-shadow: 0 0 24px rgba(192,57,43,0.3);
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rec-pulse {
+  0%,100% { box-shadow: 0 0 20px rgba(192,57,43,0.25); }
+  50% { box-shadow: 0 0 36px rgba(192,57,43,0.5); }
+}
+.rec-info {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.rec-info.show { display: flex; }
+.rec-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: #e06060;
+  font-weight: 700;
+}
+.rec-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red);
+  animation: blink 0.85s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+.interim { font-size: 11px; color: var(--water-l); font-style: italic; line-height: 1.4; }
 
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
-  bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  background: var(--moss);
-  color: white;
+  bottom: 150px; left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--green);
+  color: var(--bg);
   padding: 10px 20px;
-  border-radius: 22px;
+  border-radius: 24px;
   font-size: 13px;
   font-weight: 700;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.28s ease;
-  z-index: 9999;
+  transition: all 0.25s ease;
+  z-index: 200;
   white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(61,94,56,0.3);
+  box-shadow: 0 4px 20px rgba(90,173,63,0.4);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ===== MODAL (confirm clear) ===== */
+/* ===== MODAL ===== */
 .overlay {
   position: fixed; inset: 0;
-  background: rgba(24,24,20,0.55);
+  background: rgba(0,0,0,0.7);
   z-index: 100;
   display: none;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 24px;
+  padding: 0;
 }
 .overlay.show { display: flex; }
 .modal {
-  background: var(--paper);
-  border-radius: 14px;
-  padding: 22px 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  padding: 24px 20px 36px;
   width: 100%;
-  max-width: 320px;
 }
-.modal-title { font-weight: 900; font-size: 15px; margin-bottom: 8px; }
-.modal-body { font-size: 13px; opacity: 0.65; margin-bottom: 18px; line-height: 1.6; }
+.modal-title { font-family: 'Black Han Sans', sans-serif; font-size: 16px; color: var(--text); margin-bottom: 8px; }
+.modal-body { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.65; }
 .modal-btns { display: flex; gap: 8px; }
 .modal-btn {
-  flex: 1; padding: 11px; border-radius: 9px; border: none;
-  font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; font-weight: 700;
-  cursor: pointer; transition: opacity 0.2s;
+  flex: 1; padding: 13px; border-radius: 10px; border: none;
+  font-family: 'Black Han Sans', sans-serif; font-size: 14px;
+  cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.05em;
 }
 .modal-btn:active { opacity: 0.7; }
-.btn-cancel { background: var(--paper2); color: var(--ink); }
-.btn-ok { background: var(--rec); color: white; }
+.btn-cancel { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.btn-ok { background: var(--red); color: white; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
 <div class="hdr">
-  <div class="hdr-l">
-    <div class="hdr-title">🎣 FISHING LOG</div>
+  <div class="hdr-brand">
+    <div class="hdr-icon">🎣</div>
+    <div class="hdr-title">FISHING LOG</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
     <div class="hdr-date" id="hdrDate"></div>
-  </div>
-  <div class="hdr-r">
-    <button class="icon-btn" onclick="showClearModal()" title="クリア">🗑</button>
-    <button class="icon-btn" onclick="exportLog()" title="保存">💾</button>
-  </div>
-</div>
-
-<!-- INPUT -->
-<div class="inp-wrap">
-  <div class="inp-row">
-    <textarea id="inp" class="inp-box" rows="2"
-      placeholder="話した内容を入力、またはマイクボタンで音声入力…"></textarea>
-    <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
-    <button class="send-btn" id="sendBtn" onclick="handleSend()" disabled>→</button>
-  </div>
-  <div class="rec-indicator" id="recInd">
-    <div class="rec-dot"></div>
-    <span>録音中...</span>
-    <span class="interim-txt" id="interimTxt"></span>
-  </div>
-  <div class="inp-hint">
-    <span>ENTER で送信</span>
-    <span>SHIFT+ENTER で改行</span>
-    <span>タグをタップで削除</span>
+    <div class="hdr-actions">
+      <button class="hdr-btn" onclick="showClearModal()">🗑</button>
+      <button class="hdr-btn" onclick="exportLog()">💾</button>
+    </div>
   </div>
 </div>
 
@@ -463,524 +523,364 @@ body {
 <!-- CONTENT -->
 <div class="content">
 
-  <!-- DATA VIEW -->
+  <!-- DATA -->
   <div class="view on" id="view-data">
-    <div class="sec-hd">自動抽出データ — タグをタップで削除</div>
+    <div class="sec-hd">自動抽出データ</div>
     <div class="grid">
-      <div class="card full" id="c-spot">
-        <div class="card-lbl">📍 釣り場</div>
-        <div class="tags" id="t-spot"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card" id="c-weather">
-        <div class="card-lbl">🌤 天候</div>
-        <div class="tags" id="t-weather"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card" id="c-temp">
-        <div class="card-lbl">🌡 気温・水温</div>
-        <div class="tags" id="t-temp"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card" id="c-wind">
-        <div class="card-lbl">💨 風</div>
-        <div class="tags" id="t-wind"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card" id="c-water">
-        <div class="card-lbl">🌊 水の状態</div>
-        <div class="tags" id="t-water"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card full" id="c-lure">
-        <div class="card-lbl">🎣 ルアー・仕掛け</div>
-        <div class="tags" id="t-lure"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card" id="c-count">
-        <div class="card-lbl">🐟 釣果（匹）</div>
-        <div class="tags" id="t-count"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card" id="c-size">
-        <div class="card-lbl">📏 サイズ（cm）</div>
-        <div class="tags" id="t-size"><span class="tag-empty">---</span></div>
-      </div>
-      <div class="card full" id="c-cond">
-        <div class="card-lbl">📊 状況・コメント</div>
-        <div class="tags" id="t-cond"><span class="tag-empty">---</span></div>
-      </div>
+      <div class="card full" id="c-spot"><div class="card-lbl">📍 釣り場</div><div class="tags" id="t-spot"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-weather"><div class="card-lbl">🌤 天候</div><div class="tags" id="t-weather"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-temp"><div class="card-lbl">🌡 気温・水温</div><div class="tags" id="t-temp"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-wind"><div class="card-lbl">💨 風</div><div class="tags" id="t-wind"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-water"><div class="card-lbl">🌊 水の状態</div><div class="tags" id="t-water"><span class="tag-empty">---</span></div></div>
+      <div class="card full" id="c-lure"><div class="card-lbl">🎣 ルアー・仕掛け</div><div class="tags" id="t-lure"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-count"><div class="card-lbl">🐟 釣果（匹）</div><div class="tags" id="t-count"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-size"><div class="card-lbl">📏 サイズ（cm）</div><div class="tags" id="t-size"><span class="tag-empty">---</span></div></div>
+      <div class="card full" id="c-cond"><div class="card-lbl">📊 状況・コメント</div><div class="tags" id="t-cond"><span class="tag-empty">---</span></div></div>
     </div>
+    <p style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;">タグをタップで削除</p>
   </div>
 
-  <!-- FISH VIEW -->
+  <!-- FISH -->
   <div class="view" id="view-fish">
     <div class="sec-hd">釣果ログ</div>
-    <div class="fish-list" id="fishList">
-      <div class="empty"><span class="empty-icon">🎣</span>まだ釣果がありません<br>「42センチ釣れた！」のように<br>サイズや匹数を入力してください</div>
+    <div class="list" id="fishList">
+      <div class="empty"><span class="empty-ico">🐟</span>まだ釣果がありません<br>「42センチ釣れた！」のように<br>サイズや匹数を話してください</div>
     </div>
   </div>
 
-  <!-- MEMO VIEW -->
+  <!-- MEMO -->
   <div class="view" id="view-memo">
     <div class="sec-hd">現場メモ</div>
-    <div class="memo-list" id="memoList">
-      <div class="empty"><span class="empty-icon">📝</span>まだメモがありません<br>「メモ」「移動中」などで始めると<br>自動でここに振り分けられます</div>
+    <div class="list" id="memoList">
+      <div class="empty"><span class="empty-ico">📝</span>まだメモがありません<br>「メモ」「移動中」などで話すと<br>自動でここに追加されます</div>
     </div>
   </div>
 
-  <!-- SUMMARY VIEW -->
+  <!-- SUMMARY -->
   <div class="view" id="view-sum">
     <div class="sec-hd">本日のまとめ</div>
-    <div id="summaryContent"></div>
+    <div id="sumContent"></div>
     <button class="export-btn" onclick="exportLog()">💾 テキストで保存</button>
   </div>
 
 </div>
 
+<!-- ===== BOTTOM BAR ===== -->
+<div class="bottom-bar">
+  <!-- テキスト入力 -->
+  <div class="inp-row">
+    <textarea id="inp" class="inp-box" rows="1"
+      placeholder="テキストでも入力できます…"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="handleSend()" disabled>→</button>
+  </div>
+  <!-- マイク大ボタン -->
+  <div class="mic-row">
+    <button class="mic-btn" id="micBtn" onclick="toggleMic()">
+      <span class="mic-ico">🎤</span>
+      <span id="micLabel">タップして音声入力</span>
+    </button>
+    <div class="rec-info" id="recInfo">
+      <div class="rec-label"><div class="rec-dot"></div>REC</div>
+      <div class="interim" id="interimTxt"></div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- CLEAR MODAL -->
+<!-- MODAL -->
 <div class="overlay" id="overlay">
   <div class="modal">
-    <div class="modal-title">データをクリアしますか？</div>
-    <div class="modal-body">入力済みのデータ・釣果・メモがすべて消えます。この操作は元に戻せません。</div>
+    <div class="modal-title">データをクリア</div>
+    <div class="modal-body">入力済みのデータ・釣果・メモがすべて消えます。元に戻せません。</div>
     <div class="modal-btns">
       <button class="modal-btn btn-cancel" onclick="closeModal()">キャンセル</button>
-      <button class="modal-btn btn-ok" onclick="clearAll()">クリア</button>
+      <button class="modal-btn btn-ok" onclick="clearAll()">クリアする</button>
     </div>
   </div>
 </div>
 
 <script>
-// ===================================================
-//  STATE
-// ===================================================
-const state = {
+// ===== STATE =====
+const S = {
   fields: { spot:[], weather:[], temp:[], wind:[], water:[], lure:[], count:[], size:[], cond:[] },
-  fish: [],
-  memos: [],
-  currentTab: 'data'
+  fish: [], memos: [], tab: 'data'
 };
 
-// ===================================================
-//  INIT
-// ===================================================
+// ===== INIT =====
 const now = new Date();
+const pad = n => String(n).padStart(2,'0');
 document.getElementById('hdrDate').textContent =
   `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())}`;
+const timeNow = () => `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
 
-function pad(n){ return String(n).padStart(2,'0'); }
-function timeNow(){ return `${pad(now.getHours())}:${pad(new Date().getMinutes())}`; }
-
-// Input auto-resize & send button enable
 const inp = document.getElementById('inp');
 inp.addEventListener('input', () => {
   inp.style.height = 'auto';
-  inp.style.height = Math.min(inp.scrollHeight, 110) + 'px';
+  inp.style.height = Math.min(inp.scrollHeight, 90) + 'px';
   document.getElementById('sendBtn').disabled = !inp.value.trim();
 });
 inp.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
 });
 
-// ===================================================
-//  PARSE & DISPATCH
-// ===================================================
+// ===== SEND =====
 function handleSend() {
-  const text = inp.value.trim();
-  if (!text) return;
-  inp.value = '';
-  inp.style.height = 'auto';
+  const t = inp.value.trim();
+  if (!t) return;
+  inp.value = ''; inp.style.height = 'auto';
   document.getElementById('sendBtn').disabled = true;
-  dispatch(text);
+  dispatch(t);
 }
 
+// ===== DISPATCH =====
 function dispatch(text) {
-  // 1) FISH: サイズ(cm/センチ) or 匹数
   const sizeM = text.match(/(\d+(?:\.\d+)?)\s*(?:cm|センチ|センチメートル)/i);
   const countM = text.match(/(\d+)\s*(?:匹|本|尾)/);
   if (sizeM || countM) { addFish(text, sizeM, countM); return; }
-
-  // 2) MEMO: 特定キーワードで始まる or "メモ"含む
-  if (/^(メモ|memo|移動|ポイント移動|ポイント変え|確認|さっき|今から|到着|ここ|状況報告|ひとこと)/i.test(text) || /メモ/.test(text)) {
+  if (/^(メモ|memo|移動|ポイント移動|ポイント変え|確認|さっき|今から|到着|ここ|状況報告)/i.test(text) || /メモ/.test(text)) {
     addMemo(text); return;
   }
-
-  // 3) DATA: 解析してフィールドへ
   extractData(text);
 }
 
-// ===================================================
-//  DATA EXTRACTION (rule-based)
-// ===================================================
+// ===== EXTRACT =====
 function extractData(text) {
   let updated = [];
-
   // 釣り場
-  const spotR = text.match(/(?:フィールド|釣り場|場所|ポイント|川|湖|池|ダム|海|港|河口|本流|ワンド|インレット|アウトレット)(?:は|が|に|で|:)?[「]?([^\s、。！？「」]{2,14})/);
-  const spotR2 = text.match(/([^\s、。]{1,8}(?:川|湖|池|ダム|海|港|沼|浦|湾|磯|浜|橋|公園))/);
-  const spot = spotR?.[1] || spotR2?.[0];
-  if (spot) { addUniq('spot', spot); updated.push('spot'); }
-
+  const sp1 = text.match(/(?:フィールド|釣り場|場所|ポイント)(?:は|が|に|で)?[「]?([^\s、。！？]{2,14})/);
+  const sp2 = text.match(/([^\s、。]{1,8}(?:川|湖|池|ダム|海|港|沼|浦|湾|磯|浜|橋|公園))/);
+  const sp = sp1?.[1] || sp2?.[0];
+  if (sp) { addU('spot', sp); updated.push('spot'); }
   // 天候
-  const weatherMap = [
-    ['快晴','☀️ 快晴'],['晴れ','☀️ 晴れ'],['晴','☀️ 晴れ'],
-    ['曇り時々晴れ','⛅ 曇り時々晴れ'],['曇り時々雨','🌦 曇り時々雨'],
-    ['曇り','☁️ 曇り'],['曇','☁️ 曇り'],
-    ['小雨','🌦 小雨'],['雨','🌧 雨'],['霧','🌫 霧'],['雪','❄️ 雪']
-  ];
-  for (const [k,v] of weatherMap) {
-    if (text.includes(k)) { addUniq('weather', v); updated.push('weather'); break; }
+  for (const [k,v] of [['快晴','☀️ 快晴'],['晴れ','☀️ 晴れ'],['晴','☀️ 晴れ'],['曇り時々晴れ','⛅ 曇り時々晴れ'],['曇り','☁️ 曇り'],['曇','☁️ 曇り'],['小雨','🌦 小雨'],['雨','🌧 雨'],['霧','🌫 霧'],['雪','❄️ 雪']]) {
+    if (text.includes(k)) { addU('weather', v); updated.push('weather'); break; }
   }
-
-  // 気温・水温
-  const tempAll = [...text.matchAll(/(?:(気温|水温|温度)(?:は|が)?)?(\d+(?:\.\d+)?)\s*(?:度|℃)/g)];
-  tempAll.forEach(m => {
-    const label = m[1] === '水温' ? '水温' : m[1] === '気温' ? '気温' : '気温';
-    addUniq('temp', `${label} ${m[2]}℃`);
-  });
-  if (tempAll.length) updated.push('temp');
-
+  // 気温水温
+  const temps = [...text.matchAll(/(?:(気温|水温)(?:は|が)?)?(\d+(?:\.\d+)?)\s*(?:度|℃)/g)];
+  temps.forEach(m => { addU('temp', `${m[1]||'気温'} ${m[2]}℃`); });
+  if (temps.length) updated.push('temp');
   // 風
-  const windDirs = ['北東','北西','南東','南西','北','南','東','西'];
-  const windStr = ['強風','暴風','弱風','微風','無風'];
   let wind = '';
-  for (const d of windDirs) { if (text.includes(d+'風')) { wind = d+'風'; break; } }
-  if (!wind) for (const s of windStr) { if (text.includes(s)) { wind = s; break; } }
-  const windNum = text.match(/風速\s*(\d+(?:\.\d+)?)\s*(?:m|メートル)/);
-  if (windNum) wind = (wind ? wind+' ' : '') + `風速${windNum[1]}m`;
-  if (wind) { addUniq('wind', wind); updated.push('wind'); }
-
+  for (const d of ['北東','北西','南東','南西','北','南','東','西']) { if (text.includes(d+'風')) { wind = d+'風'; break; } }
+  if (!wind) for (const s of ['強風','暴風','弱風','微風','無風']) { if (text.includes(s)) { wind = s; break; } }
+  const wn = text.match(/風速\s*(\d+(?:\.\d+)?)\s*(?:m|メートル)/);
+  if (wn) wind = (wind?wind+' ':'') + `風速${wn[1]}m`;
+  if (wind) { addU('wind', wind); updated.push('wind'); }
   // 水の状態
-  const waterStates = ['コーヒー色','マッディ','笹濁り','ステイン','スーパークリア','クリア','濁り','透明','エメラルド'];
-  for (const s of waterStates) {
-    if (text.includes(s)) { addUniq('water', s); updated.push('water'); break; }
+  for (const s of ['コーヒー色','マッディ','笹濁り','ステイン','スーパークリア','クリア','濁り','透明','エメラルド']) {
+    if (text.includes(s)) { addU('water', s); updated.push('water'); break; }
   }
-
-  // ルアー（幅広く）
-  const lureKW = ['スピナーベイト','クランク','バイブ','バイブレーション','ミノー','ポッパー','フロッグ','シャッド','ネコリグ','テキサス','ライトリグ','ジグヘッド','チャター','スイムベイト','ビッグベイト','ラバージグ','トップ','ワーム','ジグ','スプーン','ブレード','シンカー','キャロ','ダウンショット','ヘビキャロ','サスペンド'];
+  // ルアー
+  const lureKW = ['スピナーベイト','クランク','バイブレーション','バイブ','ミノー','ポッパー','フロッグ','シャッド','ネコリグ','テキサス','ライトリグ','ジグヘッド','チャター','スイムベイト','ビッグベイト','ラバージグ','トップ','ワーム','ジグ','スプーン','ダウンショット','ヘビキャロ'];
   for (const kw of lureKW) {
     if (text.includes(kw)) {
-      // 前後の文脈も取る
       const m = text.match(new RegExp(`[^\\s、。]{0,6}${kw}[^\\s、。]{0,8}`));
-      addUniq('lure', m ? m[0].trim().substring(0,18) : kw);
-      updated.push('lure');
-      break;
+      addU('lure', (m?m[0]:kw).trim().substring(0,18)); updated.push('lure'); break;
     }
   }
-  // ブランド名っぽいものも
-  const brandM = text.match(/(?:使った|投げた|試した|に変えた|にした)(?:のは|のが|のを)?([^\s、。！？]{2,12})/);
-  if (brandM && !updated.includes('lure')) {
-    addUniq('lure', brandM[1].trim());
-    updated.push('lure');
-  }
-
-  // 状況コメント（残りすべて or その他）
-  if (updated.length === 0 && text.length > 3) {
-    addUniq('cond', text.substring(0, 50));
-    updated.push('cond');
-  }
-
-  updated.forEach(f => flashCard('c-' + f));
+  const bm = text.match(/(?:使った|投げた|試した|に変えた|にした)(?:のは|のが)?([^\s、。！？]{2,12})/);
+  if (bm && !updated.includes('lure')) { addU('lure', bm[1].trim()); updated.push('lure'); }
+  // コメント
+  if (updated.length === 0 && text.length > 3) { addU('cond', text.substring(0,50)); updated.push('cond'); }
+  updated.forEach(f => flash('c-'+f));
   renderFields();
-  if (updated.length) showToast('✅ データ更新');
+  if (updated.length) toast('✅ データ更新');
 }
 
-// ===================================================
-//  FISH LOG
-// ===================================================
+// ===== FISH =====
 function addFish(text, sizeM, countM) {
-  const size = sizeM ? sizeM[1] : null;
-  const count = countM ? countM[1] : '1';
-
-  // ルアー文脈
+  const size = sizeM?.[1] || null;
+  const count = countM?.[1] || '1';
   const lureKW = ['スピナーベイト','クランク','バイブ','ミノー','ポッパー','フロッグ','ワーム','ジグ','テキサス','ネコ','チャター','スイムベイト','ビッグベイト','トップ'];
   let lure = '不明';
   for (const kw of lureKW) {
     if (text.includes(kw)) {
       const m = text.match(new RegExp(`[^\\s、。]{0,5}${kw}[^\\s、。]{0,8}`));
-      lure = m ? m[0].trim().substring(0,16) : kw;
-      break;
+      lure = (m?m[0]:kw).trim().substring(0,16); break;
     }
   }
-
-  // 魚種
-  const species = ['バス','ブラックバス','スモール','ラージ','ギル','ナマズ','コイ','ヘラ','シーバス','チヌ','メバル','アジ','サバ','イワシ','トラウト','ニジマス','ヤマメ','アマゴ','イワナ'];
+  const species = ['バス','ブラックバス','スモール','ラージ','ギル','ナマズ','コイ','シーバス','チヌ','メバル','アジ','トラウト','ニジマス','ヤマメ','アマゴ','イワナ'];
   let fish = 'バス';
   for (const s of species) { if (text.includes(s)) { fish = s; break; } }
-
-  const entry = { size: size||'?', count, lure, fish, text, time: timeNow() };
-  state.fish.unshift(entry);
-
-  if (size) addUniq('size', size + 'cm');
-  addUniq('count', count + '匹');
-  if (lure !== '不明') addUniq('lure', lure);
-
-  renderFields();
-  renderFish();
-  updateBadges();
-  flashCard('c-size'); flashCard('c-count');
+  S.fish.unshift({ size: size||'?', count, lure, fish, text, time: timeNow() });
+  if (size) addU('size', size+'cm');
+  addU('count', count+'匹');
+  if (lure !== '不明') addU('lure', lure);
+  renderFields(); renderFish(); updBadge();
+  flash('c-size'); flash('c-count');
   switchTab('fish');
-  showToast('🐟 釣果を記録！');
+  toast('🐟 釣果を記録！');
 }
 
-// ===================================================
-//  MEMO
-// ===================================================
+// ===== MEMO =====
 function addMemo(text) {
-  state.memos.unshift({ text, time: timeNow() });
-  renderMemos();
-  updateBadges();
+  S.memos.unshift({ text, time: timeNow() });
+  renderMemos(); updBadge();
   switchTab('memo');
-  showToast('📝 メモ追加');
+  toast('📝 メモ追加');
 }
 
-// ===================================================
-//  RENDER
-// ===================================================
-const FIELD_MAP = [
-  ['spot','t-spot'],['weather','t-weather'],['temp','t-temp'],['wind','t-wind'],
-  ['water','t-water'],['lure','t-lure'],['count','t-count'],['size','t-size'],['cond','t-cond']
-];
-
+// ===== RENDER =====
+const FMAP = [['spot','t-spot'],['weather','t-weather'],['temp','t-temp'],['wind','t-wind'],['water','t-water'],['lure','t-lure'],['count','t-count'],['size','t-size'],['cond','t-cond']];
 function renderFields() {
-  for (const [key, elId] of FIELD_MAP) {
-    const el = document.getElementById(elId);
-    const arr = state.fields[key];
-    if (arr.length === 0) {
-      el.innerHTML = '<span class="tag-empty">---</span>';
-    } else {
-      el.innerHTML = arr.map((v,i) =>
-        `<span class="tag" onclick="removeTag('${key}',${i})">${v}</span>`
-      ).join('');
-    }
+  for (const [k,id] of FMAP) {
+    const el = document.getElementById(id);
+    const arr = S.fields[k];
+    el.innerHTML = arr.length === 0
+      ? '<span class="tag-empty">---</span>'
+      : arr.map((v,i) => `<span class="tag" onclick="removeTag('${k}',${i})">${v}</span>`).join('');
   }
 }
-
 function renderFish() {
   const el = document.getElementById('fishList');
-  if (state.fish.length === 0) {
-    el.innerHTML = '<div class="empty"><span class="empty-icon">🎣</span>まだ釣果がありません<br>「42センチ釣れた！」のように<br>サイズや匹数を入力してください</div>';
-    return;
-  }
-  el.innerHTML = state.fish.map((f,i) => `
+  if (!S.fish.length) { el.innerHTML = '<div class="empty"><span class="empty-ico">🐟</span>まだ釣果がありません<br>「42センチ釣れた！」のように<br>サイズや匹数を話してください</div>'; return; }
+  el.innerHTML = S.fish.map((f,i) => `
     <div class="fish-item">
-      <div class="fish-emoji">🐟</div>
+      <div class="fish-ico">🐟</div>
       <div class="fish-sz">${f.size}<small>cm</small></div>
       <div class="fish-info">
         <div class="fish-lure">${f.lure}</div>
         <div class="fish-meta">${f.time} ／ ${f.fish} ${f.count}匹</div>
-        <div class="fish-note">${f.text.substring(0,30)}${f.text.length>30?'…':''}</div>
+        <div class="fish-note">${f.text.substring(0,28)}${f.text.length>28?'…':''}</div>
       </div>
       <button class="del-btn" onclick="delFish(${i})">🗑</button>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
-
 function renderMemos() {
   const el = document.getElementById('memoList');
-  if (state.memos.length === 0) {
-    el.innerHTML = '<div class="empty"><span class="empty-icon">📝</span>まだメモがありません<br>「メモ」「移動中」などで始めると<br>ここに振り分けられます</div>';
-    return;
-  }
-  el.innerHTML = state.memos.map((m,i) => `
+  if (!S.memos.length) { el.innerHTML = '<div class="empty"><span class="empty-ico">📝</span>まだメモがありません<br>「メモ」「移動中」などで話すと<br>自動でここに追加されます</div>'; return; }
+  el.innerHTML = S.memos.map((m,i) => `
     <div class="memo-item">
-      <div class="memo-time">${m.time}</div>
+      <div class="memo-time">▶ ${m.time}</div>
       <div class="memo-txt">${m.text}</div>
       <button class="del-btn del-abs" onclick="delMemo(${i})">🗑</button>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
-
-function renderSummary() {
-  const f = state.fields;
-  const fishCount = state.fish.length;
-  const maxSize = state.fish.reduce((m,f) => Math.max(m, parseFloat(f.size)||0), 0);
-  const allLures = [...new Set(state.fish.map(f=>f.lure).filter(l=>l!=='不明'))];
-
+function renderSum() {
+  const f = S.fields;
+  const maxSz = S.fish.reduce((m,f) => Math.max(m, parseFloat(f.size)||0), 0);
+  const lures = [...new Set(S.fish.map(f=>f.lure).filter(l=>l!=='不明'))];
   const rows = [
-    ['釣り場', f.spot.join(', ') || '未記録'],
-    ['天候', f.weather.join(', ') || '未記録'],
-    ['気温・水温', f.temp.join(', ') || '未記録'],
-    ['風', f.wind.join(', ') || '未記録'],
-    ['水の状態', f.water.join(', ') || '未記録'],
-    ['ルアー', f.lure.join(', ') || '未記録'],
-    ['総釣果', fishCount + '匹'],
-    ['最大サイズ', maxSize ? maxSize + 'cm' : '未記録'],
-    ['ヒットルアー', allLures.join(', ') || '未記録'],
-    ['現場メモ数', state.memos.length + '件'],
+    ['釣り場', f.spot.join(', ')||'未記録'],['天候', f.weather.join(', ')||'未記録'],
+    ['気温・水温', f.temp.join(', ')||'未記録'],['風', f.wind.join(', ')||'未記録'],
+    ['水の状態', f.water.join(', ')||'未記録'],['ルアー', f.lure.join(', ')||'未記録'],
+    ['総釣果', S.fish.length+'匹'],['最大サイズ', maxSz ? maxSz+'cm' : '未記録'],
+    ['ヒットルアー', lures.join(', ')||'未記録'],['メモ数', S.memos.length+'件']
   ];
-
-  document.getElementById('summaryContent').innerHTML = `
-    <div class="summary-box">
-      <div class="summary-title">📅 ${document.getElementById('hdrDate').textContent} の釣行</div>
-      ${rows.map(([k,v]) => `<div class="summary-row"><span class="summary-key">${k}</span><span class="summary-val">${v}</span></div>`).join('')}
+  document.getElementById('sumContent').innerHTML = `
+    <div class="sum-box">
+      <div class="sum-title">📅 ${document.getElementById('hdrDate').textContent}</div>
+      ${rows.map(([k,v])=>`<div class="sum-row"><span class="sum-key">${k}</span><span class="sum-val">${v}</span></div>`).join('')}
     </div>
-    ${state.fish.length > 0 ? `
-    <div class="summary-box">
-      <div class="summary-title">🐟 釣果詳細</div>
-      ${state.fish.map((f,i) => `<div class="summary-row"><span class="summary-key">${i+1}匹目 ${f.time}</span><span class="summary-val">${f.size}cm / ${f.lure}</span></div>`).join('')}
-    </div>` : ''}
-    ${state.memos.length > 0 ? `
-    <div class="summary-box">
-      <div class="summary-title">📝 現場メモ</div>
-      ${state.memos.map(m => `<div class="summary-row"><span class="summary-key">${m.time}</span><span class="summary-val">${m.text.substring(0,24)}${m.text.length>24?'…':''}</span></div>`).join('')}
-    </div>` : ''}
+    ${S.fish.length?`<div class="sum-box"><div class="sum-title">🐟 釣果詳細</div>${S.fish.map((f,i)=>`<div class="sum-row"><span class="sum-key">${i+1}匹目 ${f.time}</span><span class="sum-val">${f.size}cm / ${f.lure}</span></div>`).join('')}</div>`:''}
+    ${S.memos.length?`<div class="sum-box"><div class="sum-title">📝 現場メモ</div>${S.memos.map(m=>`<div class="sum-row"><span class="sum-key">${m.time}</span><span class="sum-val">${m.text.substring(0,22)}${m.text.length>22?'…':''}</span></div>`).join('')}</div>`:''}
   `;
 }
 
-// ===================================================
-//  HELPERS
-// ===================================================
-function addUniq(field, val) {
-  if (!val || val.trim() === '') return;
-  val = val.trim();
-  if (!state.fields[field].includes(val)) state.fields[field].push(val);
+// ===== HELPERS =====
+function addU(field, val) { if (!val||!val.trim()) return; val=val.trim(); if (!S.fields[field].includes(val)) S.fields[field].push(val); }
+function removeTag(f,i) { S.fields[f].splice(i,1); renderFields(); }
+function delFish(i) { S.fish.splice(i,1); renderFish(); updBadge(); }
+function delMemo(i) { S.memos.splice(i,1); renderMemos(); updBadge(); }
+function flash(id) {
+  const el = document.getElementById(id); if (!el) return;
+  el.classList.add('lit'); setTimeout(()=>el.classList.remove('lit'),1300);
 }
-
-function removeTag(field, idx) {
-  state.fields[field].splice(idx, 1);
-  renderFields();
-}
-
-function delFish(i) { state.fish.splice(i, 1); renderFish(); updateBadges(); }
-function delMemo(i) { state.memos.splice(i, 1); renderMemos(); updateBadges(); }
-
-function flashCard(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.add('lit');
-  setTimeout(() => el.classList.remove('lit'), 1300);
-}
-
-function updateBadges() {
-  document.getElementById('bdg-fish').textContent = state.fish.length;
-  document.getElementById('bdg-memo').textContent = state.memos.length;
+function updBadge() {
   ['fish','memo'].forEach(id => {
     const b = document.getElementById('bdg-'+id);
-    b.classList.add('new');
-    setTimeout(() => b.classList.remove('new'), 500);
+    b.textContent = id==='fish' ? S.fish.length : S.memos.length;
+    b.classList.add('pop'); setTimeout(()=>b.classList.remove('pop'),400);
   });
 }
-
-function switchTab(tab) {
-  state.currentTab = tab;
-  ['data','fish','memo','sum'].forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('on', t===tab);
-    document.getElementById('view-'+t).classList.toggle('on', t===tab);
+function switchTab(t) {
+  S.tab = t;
+  ['data','fish','memo','sum'].forEach(id => {
+    document.getElementById('tab-'+id).classList.toggle('on', id===t);
+    document.getElementById('view-'+id).classList.toggle('on', id===t);
   });
-  if (tab === 'sum') renderSummary();
+  if (t==='sum') renderSum();
   document.querySelector('.content').scrollTop = 0;
 }
-
-// ===================================================
-//  TOAST
-// ===================================================
-let toastTimer;
-function showToast(msg) {
+let toastT;
+function toast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('show'),2200);
 }
-
-// ===================================================
-//  CLEAR / EXPORT
-// ===================================================
 function showClearModal() { document.getElementById('overlay').classList.add('show'); }
 function closeModal() { document.getElementById('overlay').classList.remove('show'); }
 function clearAll() {
-  Object.keys(state.fields).forEach(k => state.fields[k] = []);
-  state.fish = []; state.memos = [];
-  renderFields(); renderFish(); renderMemos(); updateBadges();
-  closeModal();
-  showToast('🗑 クリアしました');
-  switchTab('data');
+  Object.keys(S.fields).forEach(k=>S.fields[k]=[]);
+  S.fish=[]; S.memos=[];
+  renderFields(); renderFish(); renderMemos(); updBadge();
+  closeModal(); toast('🗑 クリアしました'); switchTab('data');
 }
-
 function exportLog() {
-  const f = state.fields;
+  const f = S.fields;
   const date = document.getElementById('hdrDate').textContent;
   const lines = [
-    `【釣り日記 ${date}】`,
-    '',
-    `▼ 釣り場　: ${f.spot.join(', ') || '未記録'}`,
-    `▼ 天候　　: ${f.weather.join(', ') || '未記録'}`,
-    `▼ 気温水温: ${f.temp.join(', ') || '未記録'}`,
-    `▼ 風　　　: ${f.wind.join(', ') || '未記録'}`,
-    `▼ 水の状態: ${f.water.join(', ') || '未記録'}`,
-    `▼ ルアー　: ${f.lure.join(', ') || '未記録'}`,
-    `▼ 総釣果　: ${state.fish.length}匹`,
-    `▼ サイズ　: ${f.size.join(', ') || '未記録'}`,
-    '',
+    `【釣り日記 ${date}】`, '',
+    `▼ 釣り場　: ${f.spot.join(', ')||'未記録'}`,
+    `▼ 天候　　: ${f.weather.join(', ')||'未記録'}`,
+    `▼ 気温水温: ${f.temp.join(', ')||'未記録'}`,
+    `▼ 風　　　: ${f.wind.join(', ')||'未記録'}`,
+    `▼ 水の状態: ${f.water.join(', ')||'未記録'}`,
+    `▼ ルアー　: ${f.lure.join(', ')||'未記録'}`,
+    `▼ 総釣果　: ${S.fish.length}匹`, '',
     '▼ 釣果ログ:',
-    ...state.fish.map((f,i) => `  ${i+1}. ${f.time} - ${f.size}cm [${f.lure}] ${f.fish}`),
-    '',
+    ...S.fish.map((f,i)=>`  ${i+1}. ${f.time} - ${f.size}cm [${f.lure}] ${f.fish}`), '',
     '▼ 現場メモ:',
-    ...state.memos.map(m => `  ${m.time} - ${m.text}`),
+    ...S.memos.map(m=>`  ${m.time} - ${m.text}`)
   ];
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));
   a.download = `釣り日記_${date.replace(/\./g,'-')}.txt`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  showToast('💾 保存しました！');
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('💾 保存しました！');
 }
 
-// ===================================================
-//  SPEECH RECOGNITION
-// ===================================================
+// ===== SPEECH RECOGNITION =====
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-let isRec = false;
+let recog = null, isRec = false;
 
 function toggleMic() {
-  if (!SR) {
-    showToast('⚠️ このブラウザは音声入力非対応');
-    return;
-  }
+  if (!SR) { toast('⚠️ このブラウザは音声入力非対応'); return; }
   isRec ? stopMic() : startMic();
 }
-
 function startMic() {
-  recognition = new SR();
-  recognition.lang = 'ja-JP';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  recognition.onstart = () => {
+  recog = new SR();
+  recog.lang = 'ja-JP'; recog.continuous = true; recog.interimResults = true;
+  recog.onstart = () => {
     isRec = true;
     document.getElementById('micBtn').classList.add('rec');
-    document.getElementById('recInd').style.display = 'flex';
+    document.getElementById('micLabel').textContent = 'タップして停止';
+    document.getElementById('recInfo').classList.add('show');
   };
-  recognition.onresult = e => {
-    let interim = '', final = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const t = e.results[i][0].transcript;
-      e.results[i].isFinal ? (final += t) : (interim += t);
+  recog.onresult = e => {
+    let interim='', final='';
+    for (let i=e.resultIndex; i<e.results.length; i++) {
+      const t=e.results[i][0].transcript;
+      e.results[i].isFinal ? (final+=t) : (interim+=t);
     }
     document.getElementById('interimTxt').textContent = interim;
-    if (final.trim()) {
-      document.getElementById('interimTxt').textContent = '';
-      // 音声の確定テキストを直接処理
-      dispatch(final.trim());
-    }
+    if (final.trim()) { document.getElementById('interimTxt').textContent=''; dispatch(final.trim()); }
   };
-  recognition.onerror = e => {
-    if (e.error !== 'no-speech') { stopMic(); showToast('⚠️ マイクエラー: ' + e.error); }
-  };
-  recognition.onend = () => {
-    if (isRec) { try { recognition.start(); } catch(e){} }
-  };
-  try { recognition.start(); } catch(e) { showToast('⚠️ マイクにアクセスできません'); }
+  recog.onerror = e => { if(e.error!=='no-speech') { stopMic(); toast('⚠️ マイクエラー: '+e.error); } };
+  recog.onend = () => { if(isRec) { try{recog.start();}catch(e){} } };
+  try { recog.start(); } catch(e) { toast('⚠️ マイクにアクセスできません'); }
 }
-
 function stopMic() {
   isRec = false;
-  try { recognition?.stop(); } catch(e) {}
+  try { recog?.stop(); } catch(e) {}
   document.getElementById('micBtn').classList.remove('rec');
-  document.getElementById('recInd').style.display = 'none';
+  document.getElementById('micLabel').textContent = 'タップして音声入力';
+  document.getElementById('recInfo').classList.remove('show');
   document.getElementById('interimTxt').textContent = '';
 }
 
-// Init render
 renderFields();
 </script>
 </body>
