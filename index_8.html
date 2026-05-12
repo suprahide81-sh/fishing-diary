@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a6b3a">
+<title>釣り日記</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Oswald:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+/* ========================================
+   THEME VARIABLES
+======================================== */
+body.theme-light {
+  --bg:#f7f9f7; --surface:#ffffff; --surface2:#f0f4f1; --border:#d8e4da;
+  --primary:#1a6b3a; --primary-l:#2a8f50; --primary-p:#e8f5ed;
+  --accent:#e07b20; --accent-p:#fff3e6;
+  --water:#1976a8; --water-p:#e3f2fd;
+  --red:#c0392b; --text:#1a2a1e; --text2:#5a6e5e; --text3:#9aaa9e;
+  --shadow:0 1px 4px rgba(26,107,58,0.10); --shadow-lg:0 4px 16px rgba(26,107,58,0.13);
+  --hdr-bg:#1a6b3a; --hdr-text:#ffffff;
+  --font-main:'Noto Sans JP',sans-serif; --font-display:'Oswald',sans-serif;
+  --tag-lure-bg:#e3f2fd; --tag-lure-text:#1976a8; --tag-lure-border:rgba(25,118,168,0.2);
+  --mic-rec-bg:#ffeaea; --mic-rec-border:#c0392b; --mic-rec-text:#c0392b;
+  --card-lit-border:#2a8f50; --card-lit-shadow:rgba(26,107,58,0.1);
+}
+body.theme-dark {
+  --bg:#0d1a0f; --surface:#1a2a1e; --surface2:#1c2e20; --border:rgba(120,180,80,0.18);
+  --primary:#5aad3f; --primary-l:#7ed45a; --primary-p:rgba(90,173,63,0.13);
+  --accent:#d4820a; --accent-p:rgba(212,130,10,0.15);
+  --water:#3daa80; --water-p:rgba(42,122,92,0.2);
+  --red:#e06060; --text:#e8f0e0; --text2:rgba(232,240,224,0.6); --text3:rgba(232,240,224,0.3);
+  --shadow:0 1px 4px rgba(0,0,0,0.3); --shadow-lg:0 4px 16px rgba(0,0,0,0.4);
+  --hdr-bg:#0d1a0f; --hdr-text:#7ed45a;
+  --font-main:'Zen Kaku Gothic New',sans-serif; --font-display:'Black Han Sans',sans-serif;
+  --tag-lure-bg:rgba(42,122,92,0.2); --tag-lure-text:#3daa80; --tag-lure-border:rgba(42,122,92,0.4);
+  --mic-rec-bg:rgba(192,57,43,0.15); --mic-rec-border:#c0392b; --mic-rec-text:#e06060;
+  --card-lit-border:#5aad3f; --card-lit-shadow:rgba(90,173,63,0.12);
+}
+body.theme-wabi {
+  --bg:#f5efe3; --surface:#faf6ee; --surface2:#ede5d8; --border:#c8b89a;
+  --primary:#4a3728; --primary-l:#6b5040; --primary-p:#ede0cc;
+  --accent:#8b6914; --accent-p:#f5e8c8;
+  --water:#2a5a6e; --water-p:#d8eaf0;
+  --red:#8b2020; --text:#2a1e14; --text2:#6b5040; --text3:#9a8a78;
+  --shadow:0 1px 4px rgba(74,55,40,0.12); --shadow-lg:0 4px 16px rgba(74,55,40,0.15);
+  --hdr-bg:#2a1e14; --hdr-text:#d4c4a8;
+  --font-main:'Noto Sans JP',sans-serif; --font-display:'Zen Kaku Gothic New',sans-serif;
+  --tag-lure-bg:#d8eaf0; --tag-lure-text:#2a5a6e; --tag-lure-border:rgba(42,90,110,0.25);
+  --mic-rec-bg:#f5e0e0; --mic-rec-border:#8b2020; --mic-rec-text:#8b2020;
+  --card-lit-border:#8b6914; --card-lit-shadow:rgba(139,105,20,0.12);
+}
+
+/* ========================================
+   BASE
+======================================== */
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html { height:100%; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-main);
+  height:100%; height:-webkit-fill-available;
+  display:flex; flex-direction:column; overflow:hidden;
+  transition:background 0.3s, color 0.3s;
+}
+
+/* ========================================
+   HEADER
+======================================== */
+.hdr {
+  background:var(--hdr-bg);
+  padding:10px 14px 9px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0;
+  box-shadow:var(--shadow-lg);
+  position:relative;
+}
+body.theme-dark .hdr::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--primary),transparent); opacity:.4;
+}
+.hdr-left { display:flex; align-items:center; gap:8px; }
+.hdr-logo { font-size:22px; }
+.hdr-title {
+  font-family:var(--font-display);
+  font-size:17px; font-weight:700;
+  color:var(--hdr-text);
+  letter-spacing:0.08em;
+}
+.hdr-date { font-size:10px; color:var(--hdr-text); opacity:.55; letter-spacing:.05em; margin-top:1px; }
+.hdr-right { display:flex; gap:5px; align-items:center; }
+.hdr-btn {
+  background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2);
+  color:var(--hdr-text); border-radius:8px; padding:6px 9px;
+  font-size:14px; cursor:pointer; transition:background .15s;
+}
+.hdr-btn:active { background:rgba(255,255,255,0.25); }
+
+/* テーマ切替ボタン */
+.theme-switcher { display:flex; gap:4px; }
+.theme-dot {
+  width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.4);
+  cursor:pointer; transition:transform .2s, border-color .2s; flex-shrink:0;
+}
+.theme-dot.active { border-color:white; transform:scale(1.15); }
+.theme-dot.t-light { background:linear-gradient(135deg,#e8f5ed,#1a6b3a); }
+.theme-dot.t-dark  { background:linear-gradient(135deg,#0d1a0f,#5aad3f); }
+.theme-dot.t-wabi  { background:linear-gradient(135deg,#f5efe3,#4a3728); }
+
+/* ========================================
+   TABS
+======================================== */
+.tabs {
+  display:flex; background:var(--surface);
+  border-bottom:2px solid var(--border); flex-shrink:0;
+}
+.tab {
+  flex:1; padding:9px 2px 8px; border:none; background:transparent;
+  color:var(--text3); font-family:var(--font-main);
+  font-size:11px; font-weight:700; cursor:pointer;
+  border-bottom:2.5px solid transparent; margin-bottom:-2px;
+  transition:all .2s; display:flex; align-items:center; justify-content:center; gap:3px;
+}
+.tab.on { color:var(--primary); border-bottom-color:var(--primary); }
+.bdg {
+  background:var(--primary); color:var(--surface);
+  border-radius:9px; font-size:9px; font-weight:700;
+  padding:1px 5px; min-width:16px; text-align:center;
+}
+.bdg.pop { animation:bdg-pop .3s ease; }
+@keyframes bdg-pop { 0%{transform:scale(.4)} 70%{transform:scale(1.25)} 100%{transform:scale(1)} }
+
+/* ========================================
+   CONTENT
+======================================== */
+.content {
+  flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:12px; padding-bottom:165px;
+}
+.view { display:none; }
+.view.on { display:block; }
+.sec-hd {
+  font-size:9px; font-weight:700; color:var(--text3);
+  letter-spacing:.14em; text-transform:uppercase;
+  margin-bottom:10px; display:flex; align-items:center; gap:6px;
+}
+.sec-hd::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ========================================
+   DATA GRID
+======================================== */
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.card {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:11px; padding:9px 11px;
+  box-shadow:var(--shadow); transition:border-color .3s, box-shadow .3s;
+}
+.card.full { grid-column:1/-1; }
+.card.lit { border-color:var(--card-lit-border); box-shadow:0 0 0 3px var(--card-lit-shadow); }
+.card-lbl { font-size:8px; font-weight:700; color:var(--text3); letter-spacing:.1em; text-transform:uppercase; margin-bottom:5px; }
+.tags { display:flex; flex-wrap:wrap; gap:3px; min-height:22px; align-items:flex-start; }
+.tag {
+  background:var(--primary-p); color:var(--primary);
+  border:1px solid rgba(26,107,58,0.2); border-radius:5px;
+  padding:2px 8px; font-size:12px; font-weight:700;
+  cursor:pointer; animation:tag-in .2s ease;
+}
+body.theme-dark .tag { border-color:rgba(90,173,63,0.3); }
+body.theme-wabi .tag { border-color:rgba(74,55,40,0.2); }
+.tag:active { opacity:.5; }
+.tag.lure { background:var(--tag-lure-bg); color:var(--tag-lure-text); border-color:var(--tag-lure-border); }
+@keyframes tag-in { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+.tag-empty { font-size:11px; color:var(--text3); line-height:22px; }
+
+/* ルアー詳細 */
+.lure-det {
+  background:var(--water-p); border:1px solid var(--tag-lure-border);
+  border-radius:8px; padding:8px 10px; margin-top:6px; display:none;
+}
+.lure-det.show { display:block; }
+.lure-det-name { font-size:13px; font-weight:700; color:var(--water); margin-bottom:4px; }
+.lure-det-sub { font-size:11px; color:var(--text2); margin-bottom:6px; }
+.lure-sel-lbl { font-size:8px; font-weight:700; color:var(--text3); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+.chips { display:flex; flex-wrap:wrap; gap:3px; margin-bottom:2px; }
+.chip {
+  background:var(--surface2); color:var(--text2);
+  border:1px solid var(--border); border-radius:4px;
+  padding:2px 7px; font-size:11px; cursor:pointer; transition:all .15s;
+}
+.chip.sz:active, .chip.sz.sel { background:var(--water-p); color:var(--water); border-color:var(--tag-lure-border); font-weight:700; }
+.chip.col:active, .chip.col.sel { background:var(--accent-p); color:var(--accent); border-color:rgba(224,123,32,0.3); font-weight:700; }
+.lure-result {
+  margin-top:6px; padding:5px 8px;
+  background:var(--primary-p); border:1px solid rgba(26,107,58,0.2);
+  border-radius:5px; font-size:11px; font-weight:700; color:var(--primary);
+  display:none;
+}
+body.theme-dark .lure-result { border-color:rgba(90,173,63,0.3); }
+.lure-result.show { display:block; }
+
+/* ルアー候補 */
+.sug-wrap {
+  position:fixed; left:12px; right:12px; bottom:163px; z-index:80;
+  background:var(--surface); border:1.5px solid var(--primary);
+  border-radius:11px; overflow:hidden; box-shadow:var(--shadow-lg); display:none;
+}
+.sug-wrap.show { display:block; }
+.sug-hd {
+  font-size:9px; font-weight:700; color:var(--text3);
+  padding:6px 12px 4px; letter-spacing:.1em; text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+}
+.sug-body { max-height:190px; overflow-y:auto; }
+.sug-item {
+  padding:9px 12px; display:flex; align-items:center; gap:8px;
+  cursor:pointer; border-bottom:1px solid var(--border); transition:background .15s;
+}
+.sug-item:last-child { border-bottom:none; }
+.sug-item:active { background:var(--primary-p); }
+.sug-name { font-size:13px; font-weight:700; color:var(--text); }
+.sug-sub { font-size:10px; color:var(--text3); margin-top:1px; }
+.sug-type {
+  font-size:9px; background:var(--water-p); color:var(--water);
+  border-radius:4px; padding:2px 6px; flex-shrink:0;
+}
+
+/* ========================================
+   FISH / MEMO LIST
+======================================== */
+.list { display:flex; flex-direction:column; gap:8px; }
+.fish-item {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-left:4px solid var(--water); border-radius:0 11px 11px 0;
+  padding:10px 12px; display:flex; align-items:center; gap:10px;
+  box-shadow:var(--shadow); animation:sl-in .22s ease;
+}
+@keyframes sl-in { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+.fish-sz {
+  font-family:var(--font-display); font-size:26px; font-weight:700;
+  color:var(--water); min-width:58px; text-align:center; flex-shrink:0; line-height:1;
+}
+.fish-sz small { font-size:11px; font-weight:400; color:var(--text3); display:block; font-family:var(--font-main); }
+.fish-info { flex:1; min-width:0; }
+.fish-lure { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fish-meta { font-size:10px; color:var(--text3); margin-top:2px; }
+.fish-note { font-size:11px; color:var(--text2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.memo-item {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-left:4px solid var(--accent); border-radius:0 11px 11px 0;
+  padding:9px 38px 9px 12px; box-shadow:var(--shadow);
+  animation:sl-in .22s ease; position:relative;
+}
+.memo-time { font-size:9px; color:var(--accent); font-weight:700; margin-bottom:3px; }
+.memo-txt { font-size:13px; line-height:1.65; }
+.del-btn { background:none; border:none; cursor:pointer; font-size:15px; color:var(--text3); padding:6px; flex-shrink:0; }
+.del-btn:active { color:var(--red); }
+.del-abs { position:absolute; top:6px; right:4px; }
+.empty { text-align:center; padding:40px 20px; color:var(--text3); font-size:13px; line-height:2; }
+.empty-ico { font-size:40px; display:block; margin-bottom:8px; }
+
+/* ========================================
+   SUMMARY
+======================================== */
+.sum-card {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:11px; padding:13px; margin-bottom:10px; box-shadow:var(--shadow);
+}
+.sum-title { font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--primary); margin-bottom:9px; letter-spacing:.05em; }
+.sum-row { display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.sum-row:last-child { border-bottom:none; }
+.sum-key { color:var(--text2); }
+.sum-val { font-weight:700; text-align:right; max-width:60%; }
+.export-btn {
+  width:100%; padding:14px; background:var(--primary); color:var(--surface);
+  border:none; border-radius:11px; font-family:var(--font-display);
+  font-size:15px; font-weight:700; letter-spacing:.08em;
+  cursor:pointer; box-shadow:var(--shadow-lg); transition:opacity .2s;
+}
+body.theme-light .export-btn { color:white; }
+.export-btn:active { opacity:.75; }
+
+/* ========================================
+   BOTTOM BAR
+======================================== */
+.btm {
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--surface); border-top:1.5px solid var(--border);
+  padding:10px 12px 18px; z-index:50; box-shadow:0 -2px 12px rgba(0,0,0,0.08);
+}
+body.theme-dark .btm::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--primary),transparent); opacity:.35;
+}
+.inp-row { display:flex; gap:8px; align-items:flex-end; margin-bottom:8px; }
+.inp-box {
+  flex:1; background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:10px; padding:10px 12px;
+  font-family:var(--font-main); font-size:14px; color:var(--text);
+  resize:none; min-height:44px; max-height:88px; line-height:1.5; outline:none;
+  transition:border-color .2s, box-shadow .2s;
+}
+.inp-box:focus { border-color:var(--primary); box-shadow:0 0 0 2px var(--card-lit-shadow); }
+.inp-box::placeholder { color:var(--text3); font-size:12px; }
+.ok-btn {
+  height:44px; padding:0 14px; background:var(--primary); color:var(--surface);
+  border:none; border-radius:10px; font-family:var(--font-display);
+  font-size:15px; font-weight:700; cursor:pointer; flex-shrink:0;
+  box-shadow:var(--shadow); transition:opacity .15s;
+}
+body.theme-light .ok-btn { color:white; }
+.ok-btn:active { opacity:.75; }
+.ok-btn:disabled { background:var(--border); color:var(--text3); box-shadow:none; cursor:default; }
+.mic-btn {
+  width:100%; height:52px; border-radius:12px;
+  border:2px solid var(--primary); background:var(--primary-p);
+  color:var(--primary); font-family:var(--font-display);
+  font-size:15px; font-weight:700; letter-spacing:.08em;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:all .2s;
+}
+.mic-btn:active { opacity:.75; }
+.mic-btn.rec {
+  background:var(--mic-rec-bg); border-color:var(--mic-rec-border);
+  color:var(--mic-rec-text); animation:rec-glow 1.4s ease-in-out infinite;
+}
+@keyframes rec-glow { 0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.15)} 50%{box-shadow:0 0 0 6px rgba(192,57,43,.06)} }
+.rec-row { display:none; align-items:center; gap:6px; }
+.rec-row.show { display:flex; }
+.rec-dot { width:7px; height:7px; border-radius:50%; background:var(--red); animation:blink .85s ease-in-out infinite; flex-shrink:0; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+.interim { font-size:11px; color:var(--water); font-style:italic; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:200px; }
+
+/* ========================================
+   TOAST / MODAL
+======================================== */
+.toast {
+  position:fixed; bottom:148px; left:50%;
+  transform:translateX(-50%) translateY(10px);
+  background:var(--primary); color:white;
+  padding:10px 20px; border-radius:24px;
+  font-size:13px; font-weight:700; opacity:0; pointer-events:none;
+  transition:all .25s ease; z-index:200; white-space:nowrap;
+  box-shadow:var(--shadow-lg);
+}
+body.theme-wabi .toast { color:var(--surface); }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; display:none; align-items:flex-end; }
+.overlay.show { display:flex; }
+.modal { background:var(--surface); border-radius:20px 20px 0 0; padding:24px 20px 36px; width:100%; box-shadow:0 -4px 24px rgba(0,0,0,.12); }
+.modal-title { font-family:var(--font-display); font-size:17px; font-weight:700; color:var(--text); margin-bottom:8px; }
+.modal-body { font-size:13px; color:var(--text2); margin-bottom:20px; line-height:1.7; }
+.modal-btns { display:flex; gap:8px; }
+.modal-btn { flex:1; padding:13px; border-radius:10px; border:none; font-family:var(--font-main); font-size:14px; font-weight:700; cursor:pointer; }
+.modal-btn:active { opacity:.7; }
+.btn-cancel { background:var(--surface2); color:var(--text2); border:1.5px solid var(--border); }
+.btn-ok { background:var(--red); color:white; }
+
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+</head>
+<body class="theme-light">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-logo">🎣</div>
+    <div>
+      <div class="hdr-title">FISHING LOG</div>
+      <div class="hdr-date" id="hdrDate"></div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="theme-switcher">
+      <div class="theme-dot t-light active" onclick="setTheme('light')" title="ライト"></div>
+      <div class="theme-dot t-dark"  onclick="setTheme('dark')"  title="ダーク"></div>
+      <div class="theme-dot t-wabi"  onclick="setTheme('wabi')"  title="和風"></div>
+    </div>
+    <button class="hdr-btn" onclick="showClearModal()">🗑</button>
+    <button class="hdr-btn" onclick="exportLog()">💾</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab on" id="tab-data" onclick="sw('data')">📋 データ</button>
+  <button class="tab"    id="tab-fish" onclick="sw('fish')">🐟 釣果 <span class="bdg" id="bdg-fish">0</span></button>
+  <button class="tab"    id="tab-memo" onclick="sw('memo')">📝 メモ <span class="bdg" id="bdg-memo">0</span></button>
+  <button class="tab"    id="tab-sum"  onclick="sw('sum')">📊 まとめ</button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- DATA -->
+  <div class="view on" id="view-data">
+    <div class="sec-hd">自動抽出データ</div>
+    <div class="grid">
+      <div class="card full" id="c-spot"><div class="card-lbl">📍 釣り場</div><div class="tags" id="t-spot"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-weather"><div class="card-lbl">🌤 天候</div><div class="tags" id="t-weather"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-temp"><div class="card-lbl">🌡 気温・水温</div><div class="tags" id="t-temp"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-wind"><div class="card-lbl">💨 風</div><div class="tags" id="t-wind"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-water"><div class="card-lbl">🌊 水の状態</div><div class="tags" id="t-water"><span class="tag-empty">---</span></div></div>
+      <div class="card full" id="c-lure">
+        <div class="card-lbl">🎣 ルアー・リグ・タックル</div>
+        <div class="tags" id="t-lure"><span class="tag-empty">---</span></div>
+        <div class="lure-det" id="lureDet" style="display:none!important">
+          <div class="lure-det-name" id="ldName"></div>
+          <div class="lure-det-sub"  id="ldSub"></div>
+          <div class="lure-sel-lbl">📐 サイズ</div>
+          <div class="chips" id="ldSzChips"></div>
+          <div class="lure-sel-lbl" style="margin-top:5px">🎨 カラー</div>
+          <div class="chips" id="ldColChips"></div>
+          <div class="lure-result" id="ldResult"></div>
+        </div>
+      </div>
+      <div class="card" id="c-count"><div class="card-lbl">🐟 釣果（匹）</div><div class="tags" id="t-count"><span class="tag-empty">---</span></div></div>
+      <div class="card" id="c-size"><div class="card-lbl">📏 サイズ（cm）</div><div class="tags" id="t-size"><span class="tag-empty">---</span></div></div>
+      <div class="card full" id="c-cond"><div class="card-lbl">📊 状況・コメント</div><div class="tags" id="t-cond"><span class="tag-empty">---</span></div></div>
+    </div>
+    <p style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;">タグをタップで削除</p>
+  </div>
+
+  <!-- FISH -->
+  <div class="view" id="view-fish">
+    <div class="sec-hd">釣果ログ</div>
+    <div class="list" id="fishList">
+      <div class="empty"><span class="empty-ico">🐟</span>まだ釣果がありません<br>「42センチ釣れた！」のように<br>サイズや匹数を話してください</div>
+    </div>
+  </div>
+
+  <!-- MEMO -->
+  <div class="view" id="view-memo">
+    <div class="sec-hd">現場メモ</div>
+    <div class="list" id="memoList">
+      <div class="empty"><span class="empty-ico">📝</span>まだメモがありません<br>「メモ」「移動中」などで話すと<br>自動でここに追加されます</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="view" id="view-sum">
+    <div class="sec-hd">本日のまとめ</div>
+    <div id="sumContent"></div>
+    <button class="export-btn" onclick="exportLog()">💾 テキストで保存</button>
+  </div>
+
+</div>
+
+<!-- ルアー候補 -->
+<div class="sug-wrap" id="sugWrap" style="display:none!important">
+  <div class="sug-hd">🎣 ルアー候補 — タップで選択</div>
+  <div class="sug-body" id="sugBody"></div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="btm">
+  <div class="inp-row">
+    <textarea id="inp" class="inp-box" rows="1" placeholder="ルアー名・状況などを入力…"></textarea>
+    <button class="ok-btn" id="okBtn" onclick="handleSend()" disabled>決定</button>
+  </div>
+  <button class="mic-btn" id="micBtn" onclick="toggleMic()">
+    <span style="font-size:20px">🎤</span>
+    <span id="micLbl">タップして音声入力</span>
+    <div class="rec-row" id="recRow">
+      <div class="rec-dot"></div>
+      <span class="interim" id="interimTxt"></span>
+    </div>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title">データをクリア</div>
+    <div class="modal-body">入力済みのデータ・釣果・メモがすべて消えます。元に戻せません。</div>
+    <div class="modal-btns">
+      <button class="modal-btn btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="modal-btn btn-ok" onclick="clearAll()">クリアする</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  LURE DATABASE
+// ============================================================
+const DB = [];
+
+// ============================================================
+//  STATE
+// ============================================================
+const S = {
+  fields: {spot:[],weather:[],temp:[],wind:[],water:[],lure:[],count:[],size:[],cond:[]},
+  fish: [], memos: [],
+  curLure: null, selSz: null, selCol: null
+};
+
+// ============================================================
+//  INIT
+// ============================================================
+const _now = new Date();
+const _pad = n => String(n).padStart(2,'0');
+document.getElementById('hdrDate').textContent =
+  `${_now.getFullYear()}.${_pad(_now.getMonth()+1)}.${_pad(_now.getDate())}`;
+const timeNow = () => { const d=new Date(); return `${_pad(d.getHours())}:${_pad(d.getMinutes())}`; };
+
+// テーマ復元
+const savedTheme = localStorage.getItem('fishingTheme') || 'light';
+setTheme(savedTheme, true);
+
+// テキストエリア
+const inp = document.getElementById('inp');
+inp.addEventListener('input', () => {
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 88) + 'px';
+  document.getElementById('okBtn').disabled = !inp.value.trim();
+  const v = inp.value.trim();
+  // サジェスト無効
+});
+inp.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
+});
+document.addEventListener('touchstart', e => {
+  if (!document.getElementById('sugWrap').contains(e.target) && e.target !== inp) hideSug();
+}, { passive: true });
+
+// ============================================================
+//  THEME
+// ============================================================
+function setTheme(t, silent) {
+  document.body.className = 'theme-' + t;
+  document.querySelectorAll('.theme-dot').forEach(d => {
+    d.classList.toggle('active', d.classList.contains('t-' + t));
+  });
+  localStorage.setItem('fishingTheme', t);
+  if (!silent) toast('🎨 テーマ変更');
+}
+
+// ============================================================
+//  NORMALIZE & DB SEARCH
+// ============================================================
+function norm(s) {
+  return s
+    .replace(/(?:してみた|使ってみた|入れてみた|に変えた|にした|使った|投げた|試した|入れた|で釣れた)$/g, '')
+    .toLowerCase().replace(/\s+/g, '')
+    .replace(/[はがをにでもとかのよねって！？。、「」『』・]/g, '')
+    .replace(/ー/g, '').replace(/っ/g, '');
+}
+
+function searchDB(q) {
+  const n = norm(q);
+  return DB.filter(l =>
+    l.kw.some(k => norm(k).includes(n) || n.includes(norm(k))) ||
+    norm(l.name).includes(n) ||
+    l.maker.toLowerCase().includes(q.toLowerCase()) ||
+    l.type.includes(q)
+  ).slice(0, 7);
+}
+
+function matchDB(text) {
+  const t = norm(text);
+  let best = null, bsc = 0;
+  for (const l of DB) {
+    for (const k of l.kw) {
+      const kn = norm(k);
+      if (kn.length >= 2 && t.includes(kn) && kn.length > bsc) { best = l; bsc = kn.length; }
+    }
+  }
+  return best;
+}
+
+function buildTag(l, text) {
+  let tag = l.name;
+  const sz  = l.sizes.find(s => text.includes(s));
+  const col = l.colors.find(c => text.includes(c));
+  if (sz)  tag += ` [${sz}]`;
+  if (col) tag += ` ${col}`;
+  return tag;
+}
+
+// ============================================================
+//  SUGGEST
+// ============================================================
+function showSug(q) {
+  const res = searchDB(q);
+  if (!res.length) { hideSug(); return; }
+  document.getElementById('sugBody').innerHTML = res.map(l => `
+    <div class="sug-item" onclick="pickSug(${DB.indexOf(l)})">
+      <div style="font-size:16px;flex-shrink:0">🎣</div>
+      <div style="flex:1;min-width:0">
+        <div class="sug-name">${l.name}</div>
+        <div class="sug-sub">${l.maker} / ${l.sizes.join(' · ')}</div>
+      </div>
+      <div class="sug-type">${l.type}</div>
+    </div>`).join('');
+  document.getElementById('sugWrap').classList.add('show');
+}
+function hideSug() { document.getElementById('sugWrap').classList.remove('show'); }
+function pickSug(i) {
+  inp.value = DB[i].name;
+  inp.style.height = 'auto';
+  document.getElementById('okBtn').disabled = false;
+  hideSug(); inp.focus();
+}
+
+// ============================================================
+//  LURE DETAIL
+// ============================================================
+function showLureDet(l, text) {
+  S.curLure = l; S.selSz = null; S.selCol = null;
+  // 音声テキストから自動検出
+  S.selSz  = l.sizes.find(s => text.includes(s)) || null;
+  S.selCol = l.colors.find(c => text.includes(c)) || null;
+  document.getElementById('ldName').textContent = l.name;
+  document.getElementById('ldSub').textContent  = `${l.maker} ／ ${l.type}`;
+  renderChips();
+  updateLureResult();
+  document.getElementById('lureDet').classList.add('show');
+}
+function renderChips() {
+  const l = S.curLure; if (!l) return;
+  document.getElementById('ldSzChips').innerHTML =
+    l.sizes.map(s => `<span class="chip sz${s===S.selSz?' sel':''}" onclick="pickSz('${s.replace(/'/g,"&#39;")}')">${s}</span>`).join('');
+  document.getElementById('ldColChips').innerHTML =
+    l.colors.map(c => `<span class="chip col${c===S.selCol?' sel':''}" onclick="pickCol('${c.replace(/'/g,"&#39;")}')">${c}</span>`).join('');
+}
+function pickSz(s)  { S.selSz  = (S.selSz  === s) ? null : s; renderChips(); updateLureResult(); }
+function pickCol(c) { S.selCol = (S.selCol === c) ? null : c; renderChips(); updateLureResult(); }
+function updateLureResult() {
+  const l = S.curLure; if (!l) return;
+  let tag = l.name;
+  if (S.selSz)  tag += ` [${S.selSz}]`;
+  if (S.selCol) tag += ` ${S.selCol}`;
+  const res = document.getElementById('ldResult');
+  if (S.selSz || S.selCol) {
+    res.textContent = '✅ ' + tag;
+    res.classList.add('show');
+    S.fields.lure = S.fields.lure.filter(v => !v.startsWith(l.name));
+    addU('lure', tag);
+    renderFields();
+  } else {
+    res.classList.remove('show');
+  }
+}
+
+// ============================================================
+//  DISPATCH
+// ============================================================
+function handleSend() {
+  const t = inp.value.trim();
+  if (!t) return;
+  inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('okBtn').disabled = true;
+  dispatch(t);
+}
+
+function dispatch(text) {
+  const szM  = text.match(/(\d+(?:\.\d+)?)\s*(?:cm|センチ|センチメートル)/i);
+  const cntM = text.match(/(\d+)\s*(?:匹|本|尾)/);
+  if (szM || cntM) { addFish(text, szM, cntM); return; }
+  if (/^(メモ|memo|移動|ポイント移動|ポイント変え|確認|さっき|今から|到着|ここ|状況)/i.test(text) || text.includes('メモ')) {
+    addMemo(text); return;
+  }
+  extractData(text);
+}
+
+// ============================================================
+//  EXTRACT DATA
+// ============================================================
+function extractData(text) {
+  let upd = [];
+
+  // 釣り場
+  const sp1 = text.match(/(?:フィールド|釣り場|場所|ポイント)(?:は|が|に|で)?[「]?([^\s、。！？]{2,14})/);
+  const sp2 = text.match(/([^\s、。]{1,8}(?:川|湖|池|ダム|海|港|沼|浦|湾|磯|浜|橋|公園|ダム湖))/);
+  const sp = sp1?.[1] || sp2?.[0];
+  if (sp) { addU('spot', sp); upd.push('spot'); }
+
+  // 天候
+  for (const [k,v] of [['快晴','☀️ 快晴'],['晴れ','☀️ 晴れ'],['晴','☀️ 晴れ'],['曇り時々晴れ','⛅ 曇り時々晴れ'],['曇り','☁️ 曇り'],['曇','☁️ 曇り'],['小雨','🌦 小雨'],['雨','🌧 雨'],['霧','🌫 霧'],['雪','❄️ 雪']]) {
+    if (text.includes(k)) { addU('weather', v); upd.push('weather'); break; }
+  }
+
+  // 気温・水温
+  const ts = [...text.matchAll(/(?:(気温|水温)(?:は|が)?)?(\d+(?:\.\d+)?)\s*(?:度|℃)/g)];
+  ts.forEach(m => addU('temp', `${m[1]||'気温'} ${m[2]}℃`));
+  if (ts.length) upd.push('temp');
+
+  // 風
+  let wind = '';
+  for (const d of ['北東','北西','南東','南西','北','南','東','西']) { if (text.includes(d+'風')) { wind=d+'風'; break; } }
+  if (!wind) for (const s of ['強風','暴風','弱風','微風','無風']) { if (text.includes(s)) { wind=s; break; } }
+  const wn = text.match(/風速\s*(\d+(?:\.\d+)?)\s*(?:m|メートル)/);
+  if (wn) wind = (wind?wind+' ':'')+`風速${wn[1]}m`;
+  if (wind) { addU('wind', wind); upd.push('wind'); }
+
+  // 水の状態
+  for (const s of ['コーヒー色','マッディ','笹濁り','ステイン','スーパークリア','クリア','濁り','透明','エメラルド']) {
+    if (text.includes(s)) { addU('water', s); upd.push('water'); break; }
+  }
+
+  // ルアー抽出：「〜で釣れた」「〜に変えた」「〜を使った」などから抽出
+  if (!upd.includes('lure')) {
+    const lm1 = text.match(/(?:使った|投げた|試した|に変えた|にした|入れた)(?:のは|のが)?([^\s、。！？]{2,14})/);
+    const lm2 = text.match(/([^\s、。！？0-9]{2,14})(?:で釣れた|がヒット|でバイト)/);
+    const lm3 = text.match(/(?:ルアーは|リグは|仕掛けは)([^\s、。！？]{2,14})/);
+    const lureHit = (lm3?.[1] || lm2?.[1] || lm1?.[1] || '').trim();
+    if (lureHit.length >= 2) { addU('lure', lureHit.substring(0,20)); upd.push('lure'); }
+  }
+
+  if (upd.length === 0 && text.length > 3) { addU('cond', text.substring(0,50)); upd.push('cond'); }
+  upd.forEach(f => flash('c-'+f));
+  renderFields();
+  if (upd.length) toast('✅ データ更新');
+}
+
+// ============================================================
+//  ADD FISH
+// ============================================================
+function addFish(text, szM, cntM) {
+  const size  = szM?.[1] || null;
+  const count = cntM?.[1] || '1';
+  // テキストからルアー名を抽出（DB不使用・自由入力）
+  let lure = null;
+  const bm2 = text.match(/(?:で|を使って|投げて|試して|に変えて)([^\s、。！？0-9０-９]{2,14})(?:で|を|が|釣れ)/);
+  if (bm2) lure = bm2[1].trim();
+  if (!lure) {
+    const bm3 = text.match(/(?:使った|投げた|試した|に変えた|にした)(?:のは|のが)?([^\s、。！？]{2,14})/);
+    if (bm3) lure = bm3[1].trim();
+  }
+  if (!lure) lure = S.fields.lure.slice(-1)[0] || '不明';
+  const sp = ['バス','ブラックバス','スモール','ラージ','ギル','ナマズ','コイ','シーバス','チヌ','メバル','アジ','トラウト','ニジマス','ヤマメ','アマゴ','イワナ'];
+  let fish = 'バス';
+  for (const s of sp) { if (text.includes(s)) { fish=s; break; } }
+  S.fish.unshift({ size:size||'?', count, lure, fish, text, time:timeNow() });
+  if (size) addU('size', size+'cm');
+  addU('count', count+'匹');
+  if (lure && lure!=='不明') addU('lure', lure);
+  renderFields(); renderFish(); updBdg();
+  flash('c-size'); flash('c-count'); flash('c-lure');
+  sw('fish'); toast('🐟 釣果を記録！');
+}
+
+// ============================================================
+//  ADD MEMO
+// ============================================================
+function addMemo(text) {
+  S.memos.unshift({ text, time:timeNow() });
+  renderMemos(); updBdg(); sw('memo'); toast('📝 メモ追加');
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+const FM = [['spot','t-spot'],['weather','t-weather'],['temp','t-temp'],['wind','t-wind'],['water','t-water'],['lure','t-lure'],['count','t-count'],['size','t-size'],['cond','t-cond']];
+function renderFields() {
+  for (const [k,id] of FM) {
+    const el = document.getElementById(id), arr = S.fields[k];
+    el.innerHTML = arr.length===0 ? '<span class="tag-empty">---</span>'
+      : arr.map((v,i) => `<span class="tag${k==='lure'?' lure':''}" onclick="rmTag('${k}',${i})">${v}</span>`).join('');
+  }
+}
+function renderFish() {
+  const el = document.getElementById('fishList');
+  if (!S.fish.length) { el.innerHTML=`<div class="empty"><span class="empty-ico">🐟</span>まだ釣果がありません<br>「42センチ釣れた！」のように<br>サイズや匹数を話してください</div>`; return; }
+  el.innerHTML = S.fish.map((f,i) => `
+    <div class="fish-item">
+      <div class="fish-sz">${f.size}<small>cm</small></div>
+      <div class="fish-info">
+        <div class="fish-lure">${f.lure}</div>
+        <div class="fish-meta">${f.time} ／ ${f.fish} ${f.count}匹</div>
+        <div class="fish-note">${f.text.substring(0,30)}${f.text.length>30?'…':''}</div>
+      </div>
+      <button class="del-btn" onclick="delFish(${i})">🗑</button>
+    </div>`).join('');
+}
+function renderMemos() {
+  const el = document.getElementById('memoList');
+  if (!S.memos.length) { el.innerHTML=`<div class="empty"><span class="empty-ico">📝</span>まだメモがありません<br>「メモ」「移動中」などで話すと<br>自動でここに追加されます</div>`; return; }
+  el.innerHTML = S.memos.map((m,i) => `
+    <div class="memo-item">
+      <div class="memo-time">▶ ${m.time}</div>
+      <div class="memo-txt">${m.text}</div>
+      <button class="del-btn del-abs" onclick="delMemo(${i})">🗑</button>
+    </div>`).join('');
+}
+function renderSum() {
+  const f=S.fields, mx=S.fish.reduce((m,f)=>Math.max(m,parseFloat(f.size)||0),0), ls=[...new Set(S.fish.map(f=>f.lure).filter(l=>l!=='不明'))];
+  const rows=[['釣り場',f.spot.join(', ')||'未記録'],['天候',f.weather.join(', ')||'未記録'],['気温・水温',f.temp.join(', ')||'未記録'],['風',f.wind.join(', ')||'未記録'],['水の状態',f.water.join(', ')||'未記録'],['ルアー',f.lure.join(', ')||'未記録'],['総釣果',S.fish.length+'匹'],['最大サイズ',mx?mx+'cm':'未記録'],['ヒットルアー',ls.join(', ')||'未記録'],['メモ数',S.memos.length+'件']];
+  document.getElementById('sumContent').innerHTML =
+    `<div class="sum-card"><div class="sum-title">📅 ${document.getElementById('hdrDate').textContent}</div>${rows.map(([k,v])=>`<div class="sum-row"><span class="sum-key">${k}</span><span class="sum-val">${v}</span></div>`).join('')}</div>`+
+    (S.fish.length ? `<div class="sum-card"><div class="sum-title">🐟 釣果詳細</div>${S.fish.map((f,i)=>`<div class="sum-row"><span class="sum-key">${i+1}匹目 ${f.time}</span><span class="sum-val">${f.size}cm / ${f.lure}</span></div>`).join('')}</div>` : '')+
+    (S.memos.length ? `<div class="sum-card"><div class="sum-title">📝 現場メモ</div>${S.memos.map(m=>`<div class="sum-row"><span class="sum-key">${m.time}</span><span class="sum-val">${m.text.substring(0,24)}${m.text.length>24?'…':''}</span></div>`).join('')}</div>` : '');
+}
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function addU(f,v) { if(!v||!v.trim())return; v=v.trim(); if(!S.fields[f].includes(v))S.fields[f].push(v); }
+function rmTag(f,i) { S.fields[f].splice(i,1); if(f==='lure'&&!S.fields[f].length)document.getElementById('lureDet').classList.remove('show'); renderFields(); }
+function delFish(i) { S.fish.splice(i,1); renderFish(); updBdg(); }
+function delMemo(i) { S.memos.splice(i,1); renderMemos(); updBdg(); }
+function flash(id) { const el=document.getElementById(id); if(!el)return; el.classList.add('lit'); setTimeout(()=>el.classList.remove('lit'),1300); }
+function updBdg() {
+  ['fish','memo'].forEach(id=>{
+    const b=document.getElementById('bdg-'+id);
+    b.textContent=id==='fish'?S.fish.length:S.memos.length;
+    b.classList.add('pop'); setTimeout(()=>b.classList.remove('pop'),400);
+  });
+}
+function sw(t) {
+  ['data','fish','memo','sum'].forEach(id=>{
+    document.getElementById('tab-'+id).classList.toggle('on',id===t);
+    document.getElementById('view-'+id).classList.toggle('on',id===t);
+  });
+  if(t==='sum')renderSum();
+  document.querySelector('.content').scrollTop=0;
+}
+let _tt;
+function toast(msg) { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2200); }
+function showClearModal() { document.getElementById('overlay').classList.add('show'); }
+function closeModal()     { document.getElementById('overlay').classList.remove('show'); }
+function clearAll() {
+  Object.keys(S.fields).forEach(k=>S.fields[k]=[]);
+  S.fish=[]; S.memos=[]; S.curLure=null; S.selSz=null; S.selCol=null;
+  document.getElementById('lureDet').classList.remove('show');
+  renderFields(); renderFish(); renderMemos(); updBdg();
+  closeModal(); toast('🗑 クリアしました'); sw('data');
+}
+function exportLog() {
+  const f=S.fields, date=document.getElementById('hdrDate').textContent;
+  const lines=[`【釣り日記 ${date}】`,'',`▼ 釣り場　: ${f.spot.join(', ')||'未記録'}`,`▼ 天候　　: ${f.weather.join(', ')||'未記録'}`,`▼ 気温水温: ${f.temp.join(', ')||'未記録'}`,`▼ 風　　　: ${f.wind.join(', ')||'未記録'}`,`▼ 水の状態: ${f.water.join(', ')||'未記録'}`,`▼ ルアー　: ${f.lure.join(', ')||'未記録'}`,`▼ 総釣果　: ${S.fish.length}匹`,'','▼ 釣果ログ:',...S.fish.map((f,i)=>`  ${i+1}. ${f.time} - ${f.size}cm [${f.lure}] ${f.fish}`),'','▼ 現場メモ:',...S.memos.map(m=>`  ${m.time} - ${m.text}`)];
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));
+  a.download=`釣り日記_${date.replace(/\./g,'-')}.txt`;
+  a.click(); URL.revokeObjectURL(a.href); toast('💾 保存しました！');
+}
+
+// ============================================================
+//  SPEECH RECOGNITION
+// ============================================================
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog=null, isRec=false;
+function toggleMic() { if(!SR){toast('⚠️ このブラウザは音声入力非対応');return;} isRec?stopMic():startMic(); }
+function startMic() {
+  recog=new SR(); recog.lang='ja-JP'; recog.continuous=true; recog.interimResults=true;
+  recog.onstart=()=>{ isRec=true; document.getElementById('micBtn').classList.add('rec'); document.getElementById('micLbl').style.display='none'; document.getElementById('recRow').classList.add('show'); };
+  recog.onresult=e=>{ let int='',fin=''; for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript; e.results[i].isFinal?(fin+=t):(int+=t);} document.getElementById('interimTxt').textContent=int; if(fin.trim()){document.getElementById('interimTxt').textContent='';dispatch(fin.trim());} };
+  recog.onerror=e=>{ if(e.error!=='no-speech'){stopMic();toast('⚠️ マイクエラー: '+e.error);} };
+  recog.onend=()=>{ if(isRec){try{recog.start();}catch(e){}} };
+  try{recog.start();}catch(e){toast('⚠️ マイクにアクセスできません');}
+}
+function stopMic() {
+  isRec=false; try{recog?.stop();}catch(e){}
+  document.getElementById('micBtn').classList.remove('rec');
+  document.getElementById('micLbl').style.display='';
+  document.getElementById('recRow').classList.remove('show');
+  document.getElementById('interimTxt').textContent='';
+}
+
+// 初期描画
+renderFields();
+</script>
+</body>
+</html>
