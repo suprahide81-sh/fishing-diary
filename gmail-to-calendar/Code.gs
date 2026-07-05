@@ -19,7 +19,7 @@ const CONFIG = {
 
   // 予約メールを探すGmail検索クエリ(直近7日分)
   searchQuery:
-    '{予約完了 予約確定 予約変更 "ご予約ありがとうございます" "予約のお知らせ" "ご予約内容"} newer_than:7d',
+    '{予約完了 予約確定 予約変更 予約キャンセル 予約取消 キャンセル完了 "ご予約ありがとうございます" "予約のお知らせ" "ご予約内容"} newer_than:7d',
 
   // 処理済みスレッドに付けるラベル(二重登録防止)
   processedLabel: 'カレンダー登録済',
@@ -27,6 +27,10 @@ const CONFIG = {
   // 所要時間が読み取れなかった場合の予定の長さ(分)
   defaultDurationMinutes: 60,
 };
+
+// このスクリプトが作成した予定の目印(説明欄に埋め込む)。
+// キャンセル時はこの目印がある予定だけを削除対象にする。
+const AUTO_MARKER = '--- 自動登録 (Gmail予約メール連携) ---';
 
 /** 初回に一度だけ実行: 30分おきの自動実行トリガーを設定する */
 function setupTrigger() {
@@ -71,6 +75,14 @@ function syncBookingMailsToCalendar() {
     const body = message.getPlainBody() || '';
     const received = message.getDate();
 
+    // キャンセルメールなら、対応する自動登録済みの予定を削除して終了
+    if (isCancellationMail(subject, body)) {
+      const deleted = handleCancellationMail(calendar, subject, body, received);
+      Logger.log('キャンセルメールを処理: %s (削除した予定: %s件)', subject, deleted);
+      thread.addLabel(label);
+      return;
+    }
+
     const bookings = parseBookingMail(subject, body, received);
     if (bookings.length === 0) {
       // 予約情報が読み取れないメール(お知らせ・広告等)はラベルだけ付けてスキップ
@@ -95,6 +107,59 @@ function syncBookingMailsToCalendar() {
 
     thread.addLabel(label);
   });
+}
+
+/**
+ * キャンセル完了メールかどうかを判定する。
+ * 予約確認メールの注意書き(「変更・キャンセルはお電話にて」「期日を過ぎると
+ * 自動的に取消されます」等)に反応しないよう、件名の「予約キャンセル/予約取消」
+ * または本文の完了表現(過去形)のみを対象にする。
+ */
+function isCancellationMail(subject, body) {
+  if (/(予約|ご予約)の?(キャンセル|取消|取り消し)/.test(subject)) return true;
+  if (/(キャンセル|取消|取り消し).{0,6}(完了|承りました)/.test(subject)) return true;
+  return /(キャンセル|取消|取り消し)(を|が|は|手続きが)?.{0,10}(完了|承りました|受け付けました|受付けました|いたしました|致しました)/.test(
+    body
+  );
+}
+
+/**
+ * キャンセルメールに対応する予定を削除する。削除した件数を返す。
+ *  1. 申込番号・予約番号があれば、その番号で登録した予定を削除
+ *  2. 本文に日時があれば、その開始時刻に自動登録した予定を削除
+ * いずれも AUTO_MARKER 付き(=このスクリプトが作った)予定のみが対象。
+ */
+function handleCancellationMail(calendar, subject, body, received) {
+  let deleted = 0;
+
+  const numMatch = body.match(/(?:申込番号|予約番号)\s*[:：]?\s*(\d{4,})/);
+  if (numMatch) {
+    deleted += deleteEventsByBookingNumber(calendar, numMatch[1]);
+  }
+
+  const bookings = parseBookingMail(subject, body, received) || [];
+  bookings.forEach(function (b) {
+    deleted += deleteAutoEventsAt(calendar, b.start);
+  });
+
+  return deleted;
+}
+
+/** 指定の開始時刻に自動登録された予定を削除する。削除した件数を返す。 */
+function deleteAutoEventsAt(calendar, start) {
+  let count = 0;
+  const windowEnd = new Date(start.getTime() + 60 * 1000);
+  calendar.getEvents(start, windowEnd).forEach(function (e) {
+    if (
+      e.getStartTime().getTime() === start.getTime() &&
+      (e.getDescription() || '').indexOf(AUTO_MARKER) !== -1
+    ) {
+      Logger.log('キャンセルにより予定を削除: %s (%s)', e.getTitle(), start);
+      e.deleteEvent();
+      count++;
+    }
+  });
+  return count;
 }
 
 /**
@@ -146,8 +211,7 @@ function parseFerryMail(subject, body) {
       bookingNumber: bookingNumber,
       description:
         (bookingNumber ? '申込番号: ' + bookingNumber + '\n' : '') +
-        'メール件名: ' + subject + '\n\n' +
-        '--- 自動登録 (Gmail予約メール連携) ---',
+        'メール件名: ' + subject + '\n\n' + AUTO_MARKER,
     });
   }
   return bookings.length > 0 ? bookings : null;
@@ -203,8 +267,7 @@ function parseSalonMail(subject, body, received) {
       location: locMatch ? locMatch[1].trim() : '',
       bookingNumber: null,
       description:
-        'メール件名: ' + subject + '\n\n' +
-        '--- 自動登録 (Gmail予約メール連携) ---',
+        'メール件名: ' + subject + '\n\n' + AUTO_MARKER,
     },
   ];
 }
@@ -239,8 +302,7 @@ function parseGenericMail(subject, body, received) {
       location: '',
       bookingNumber: null,
       description:
-        'メール件名: ' + subject + '\n\n' +
-        '--- 自動登録 (Gmail予約メール連携) ---',
+        'メール件名: ' + subject + '\n\n' + AUTO_MARKER,
     },
   ];
 }
@@ -264,16 +326,26 @@ function eventExists(calendar, title, start) {
   });
 }
 
-/** 予約変更メール対応: 同じ申込番号で登録済みの今後の予定を削除する */
+/**
+ * 予約変更・キャンセルメール対応:
+ * 同じ申込番号で自動登録した今後の予定を削除する。削除した件数を返す。
+ */
 function deleteEventsByBookingNumber(calendar, bookingNumber) {
   const now = new Date();
   const oneYearLater = new Date(now.getTime() + 366 * 24 * 60 * 60 * 1000);
+  let count = 0;
   calendar
     .getEvents(now, oneYearLater, { search: '申込番号: ' + bookingNumber })
     .forEach(function (e) {
-      if ((e.getDescription() || '').indexOf('申込番号: ' + bookingNumber) !== -1) {
+      const desc = e.getDescription() || '';
+      if (
+        desc.indexOf('申込番号: ' + bookingNumber) !== -1 &&
+        desc.indexOf(AUTO_MARKER) !== -1
+      ) {
         Logger.log('旧予定を削除: %s (%s)', e.getTitle(), e.getStartTime());
         e.deleteEvent();
+        count++;
       }
     });
+  return count;
 }
