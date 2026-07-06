@@ -17,9 +17,10 @@ const CONFIG = {
   // 別カレンダーを使う場合はカレンダーID(例: xxxx@group.calendar.google.com)を指定。
   calendarId: 'primary',
 
-  // 予約メールを探すGmail検索クエリ(直近7日分)
+  // 予約メールを探すGmail検索クエリ(直近30日分)
+  // ※処理済みのメールはラベルで除外されるので、期間が広くても二重登録はされない
   searchQuery:
-    '{予約完了 予約確定 予約変更 予約キャンセル 予約取消 キャンセル完了 "ご予約ありがとうございます" "予約のお知らせ" "ご予約内容"} newer_than:7d',
+    '{予約完了 予約確定 予約変更 予約キャンセル 予約取消 キャンセル完了 "ご予約ありがとうございます" "予約のお知らせ" "ご予約内容"} newer_than:30d',
 
   // 処理済みスレッドに付けるラベル(二重登録防止)
   processedLabel: 'カレンダー登録済',
@@ -62,6 +63,10 @@ function syncBookingMailsToCalendar() {
 
   const query = CONFIG.searchQuery + ' -label:' + CONFIG.processedLabel;
   const threads = GmailApp.search(query, 0, 50);
+
+  // 検索結果は新しい順に返るので、古い順に並べ替えて時系列どおりに処理する。
+  // (予約→変更→キャンセルの順に適用され、最後のメールの内容が最終状態になる)
+  threads.reverse();
 
   threads.forEach(function (thread) {
     // ラベル検索の取りこぼし対策で二重チェック

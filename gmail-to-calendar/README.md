@@ -39,7 +39,7 @@ Gmailに届いた予約完了・予約確認メールを30分おきに自動チ�
 3. 左メニュー「プロジェクトの設定」→ タイムゾーンが **東京** になっているか確認(`appsscript.json` を表示して編集してもOK)
 4. 関数の選択で **`syncBookingMailsToCalendar`** を選んで一度「実行」
    - 初回はGmail・カレンダーへのアクセス許可を求められるので承認する
-   - これで直近7日分の予約メールが処理される
+   - これで直近30日分の予約メールが処理される
 5. 関数の選択で **`setupTrigger`** を選んで「実行」
    - 以降、30分おきに自動でチェックされます
 
@@ -50,14 +50,14 @@ Gmailに届いた予約完了・予約確認メールを30分おきに自動チ�
 ```js
 const CONFIG = {
   calendarId: 'primary',            // 予定を入れるカレンダー(別カレンダーはIDを指定)
-  searchQuery: '{予約完了 ...} newer_than:7d', // 検出キーワード
+  searchQuery: '{予約完了 ...} newer_than:30d', // 検出キーワード
   processedLabel: 'カレンダー登録済',  // 処理済みラベル名
   defaultDurationMinutes: 60,       // 所要時間不明時の予定の長さ(分)
 };
 ```
 
 - **釣り船の予約サイトなど、検出したい送信元を追加したい場合**: `searchQuery` に `from:xxx@example.com` をOR条件で足すのが確実です。
-  例: `'{予約完了 予約確定 from:yoyaku@tsuribune.example.jp} newer_than:7d'`
+  例: `'{予約完了 予約確定 from:yoyaku@tsuribune.example.jp} newer_than:30d'`
 - 実行間隔を変えたい場合は `setupTrigger` 内の `everyMinutes(30)` を変更(1, 5, 10, 15, 30が指定可)
 
 ## 動作の仕組み
