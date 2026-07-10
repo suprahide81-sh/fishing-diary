@@ -16,12 +16,27 @@
 // 「チャネルアクセストークン(長期)」をここに貼り付ける
 const LINE_CHANNEL_ACCESS_TOKEN = 'ここにチャネルアクセストークンを貼る';
 
+// (任意) Google AI Studio (aistudio.google.com) で発行した無料のAPIキー。
+// 貼ると、AIがメッセージを読んで「釣り」「飲み会」のような短いタイトルを
+// 自動生成する。空のままでもキーワード辞書方式で動く。
+const GEMINI_API_KEY = '';
+
 const LINE_CONFIG = {
   // 予定を入れるカレンダー。'primary' ならデフォルトカレンダー
   calendarId: 'primary',
   // 時刻ありの予定の長さ(分)
   defaultDurationMinutes: 60,
 };
+
+// キーワード辞書方式で使う語(上にあるものほど優先)。自由に追加OK
+const TITLE_KEYWORDS = [
+  '釣り', '船釣り', '出港', 'ゴルフ', 'キャンプ', 'BBQ', 'バーベキュー',
+  '飲み会', '忘年会', '新年会', '歓迎会', '送別会', '飲み',
+  '焼肉', '寿司', 'ランチ', 'ディナー', 'ご飯', 'ごはん', '食事',
+  '温泉', '旅行', '帰省', '映画', 'ライブ', '野球', 'サッカー', '麻雀',
+  '買い物', '病院', '歯医者', '美容室', '美容院', '床屋',
+  '打ち合わせ', '会議', 'ミーティング', '面談', '参観', '送迎', '集合',
+];
 
 // このボットが作成した予定の目印(説明欄に埋め込む)
 const LINE_AUTO_MARKER = '--- 自動登録 (LINE予定登録ボット) ---';
@@ -75,7 +90,7 @@ function handleLineEvent(ev) {
       ? CalendarApp.getDefaultCalendar()
       : CalendarApp.getCalendarById(LINE_CONFIG.calendarId);
 
-  const title = '📱 ' + parsed.title;
+  const title = '📱 ' + makeEventTitle(text, parsed.title);
   const options = { description: '元のメッセージ:\n' + text + '\n\n' + LINE_AUTO_MARKER };
 
   let when;
@@ -91,6 +106,75 @@ function handleLineEvent(ev) {
   }
 
   replyToLine(ev.replyToken, '📅 カレンダーに登録しました\n' + when + '\n' + title);
+}
+
+/**
+ * メッセージから予定のタイトルを作る。
+ *  1. Gemini APIキーが設定されていればAIに要約させる(無料枠で動作)
+ *  2. AIが使えない/失敗した場合はキーワード辞書から抽出
+ *  3. どちらもダメなら日時を除いた残りの文(fallback)を短くして使う
+ */
+function makeEventTitle(text, fallback) {
+  if (GEMINI_API_KEY) {
+    const aiTitle = generateTitleWithGemini(text);
+    if (aiTitle) return aiTitle;
+  }
+  return extractTitleByRules(text, fallback);
+}
+
+/** Gemini APIで短いタイトルを生成する。失敗時は null */
+function generateTitleWithGemini(text) {
+  try {
+    const url =
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' +
+      GEMINI_API_KEY;
+    const prompt =
+      '次のLINEメッセージは、ある予定について話しています。' +
+      'カレンダーに登録する短いタイトルを日本語で1つだけ出力してください。\n' +
+      '- 2〜10文字程度の名詞句にする(例: 釣り、飲み会、田中さんとランチ)\n' +
+      '- 日時・曜日は含めない\n' +
+      '- タイトルの文字列だけを出力し、説明・引用符・記号は付けない\n\n' +
+      'メッセージ:\n' + text;
+
+    const res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 500, temperature: 0.2 },
+      }),
+      muteHttpExceptions: true,
+    });
+    if (res.getResponseCode() !== 200) {
+      Logger.log('Gemini APIエラー: ' + res.getContentText().slice(0, 300));
+      return null;
+    }
+    const data = JSON.parse(res.getContentText());
+    let title =
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      data.candidates[0].content.parts &&
+      data.candidates[0].content.parts[0].text;
+    if (!title) return null;
+
+    title = title.replace(/[\n\r"'「」『』]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!title || title.length > 20) return null; // 変な出力は捨てて辞書方式へ
+    return title;
+  } catch (err) {
+    Logger.log('Geminiタイトル生成に失敗: ' + err);
+    return null;
+  }
+}
+
+/** キーワード辞書からタイトルを抽出する。見つからなければfallbackを短くして返す */
+function extractTitleByRules(text, fallback) {
+  for (let i = 0; i < TITLE_KEYWORDS.length; i++) {
+    if (text.indexOf(TITLE_KEYWORDS[i]) !== -1) return TITLE_KEYWORDS[i];
+  }
+  const t = (fallback || '').trim();
+  if (!t) return 'LINEの予定';
+  return t.length > 15 ? t.slice(0, 15) + '…' : t;
 }
 
 /**
