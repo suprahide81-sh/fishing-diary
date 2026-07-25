@@ -137,17 +137,89 @@ function isCancellationMail(subject, body) {
 function handleCancellationMail(calendar, subject, body, received) {
   let deleted = 0;
 
-  const numMatch = body.match(/(?:申込番号|予約番号)\s*[:：]?\s*(\d{4,})/);
-  if (numMatch) {
-    deleted += deleteEventsByBookingNumber(calendar, numMatch[1]);
+  // 1) 申込番号・予約番号での特定(いちばん確実)
+  const bookingNumber = findBookingNumber(body);
+  if (bookingNumber) {
+    deleted += deleteEventsByBookingNumber(calendar, bookingNumber);
   }
 
-  const bookings = parseBookingMail(subject, body, received) || [];
-  bookings.forEach(function (b) {
-    deleted += deleteAutoEventsAt(calendar, b.start);
-  });
+  // 2) 本文に日付+時刻があれば、その開始時刻の予定を削除
+  if (deleted === 0) {
+    const bookings = parseBookingMail(subject, body, received) || [];
+    bookings.forEach(function (b) {
+      deleted += deleteAutoEventsAt(calendar, b.start);
+    });
+  }
+
+  // 3) 時刻がなくても【出発日】等の日付が書かれていれば、その日から特定する
+  if (deleted === 0) {
+    findCancelledDates(body, received).forEach(function (d) {
+      deleted += deleteSingleAutoEventOnDate(calendar, d);
+    });
+  }
 
   return deleted;
+}
+
+/**
+ * キャンセルメールから「取り消された予定の日付」を拾う。
+ * 【出発日】2026/07/25(土) のようなラベル付き日付に対応(時刻はなくてよい)。
+ */
+function findCancelledDates(body, received) {
+  const labelRe =
+    /(?:出発日|乗車日|搭乗日|利用日|来店日|予約日|チェックイン|開始日)[^\n\d]{0,8}(?:(\d{4})[/年])?(\d{1,2})[/月](\d{1,2})日?/g;
+
+  const dates = [];
+  const seen = {};
+  let m;
+  while ((m = labelRe.exec(body)) !== null) {
+    const d = buildDate(
+      m[1] ? Number(m[1]) : null,
+      Number(m[2]),
+      Number(m[3]),
+      0,
+      0,
+      received
+    );
+    if (!seen[d.getTime()]) {
+      seen[d.getTime()] = true;
+      dates.push(d);
+    }
+  }
+  return dates;
+}
+
+/**
+ * 指定日に自動登録された予定が「ちょうど1件」のときだけ削除する。
+ * 同じ日に複数あるとどれを消すべきか判断できないため、その場合は削除しない
+ * (誤って別の予定を消さないための安全策)。
+ */
+function deleteSingleAutoEventOnDate(calendar, date) {
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const autoEvents = calendar.getEvents(dayStart, dayEnd).filter(function (e) {
+    return (e.getDescription() || '').indexOf(AUTO_MARKER) !== -1;
+  });
+
+  if (autoEvents.length !== 1) {
+    if (autoEvents.length > 1) {
+      Logger.log(
+        '同日に自動登録の予定が%s件あるため自動削除を見送り: %s',
+        autoEvents.length,
+        dayStart
+      );
+    }
+    return 0;
+  }
+
+  Logger.log(
+    'キャンセルにより予定を削除: %s (%s)',
+    autoEvents[0].getTitle(),
+    autoEvents[0].getStartTime()
+  );
+  autoEvents[0].deleteEvent();
+  return 1;
 }
 
 /** 指定の開始時刻に自動登録された予定を削除する。削除した件数を返す。 */
@@ -165,6 +237,23 @@ function deleteAutoEventsAt(calendar, start) {
     }
   });
   return count;
+}
+
+/**
+ * 本文から申込番号・予約番号を探す。見つからなければ null。
+ * 「【予約番号：43258944】」「申込番号 26345785」のような表記に対応。
+ */
+function findBookingNumber(body) {
+  const m = body.match(/(?:申込番号|予約番号|受付番号|予約No\.?)\s*[:：]?\s*(\d{4,})/i);
+  return m ? m[1] : null;
+}
+
+/** 予定の説明欄に入れる文章を組み立てる(申込番号があれば先頭に入れる) */
+function buildDescription(subject, bookingNumber) {
+  return (
+    (bookingNumber ? '申込番号: ' + bookingNumber + '\n' : '') +
+    'メール件名: ' + subject + '\n\n' + AUTO_MARKER
+  );
 }
 
 /**
@@ -191,8 +280,7 @@ function parseFerryMail(subject, body) {
   const legRe =
     /(\d{4})\/(\d{1,2})\/(\d{1,2})\([^)]+\)\s*\n\s*(\d{1,2}):(\d{2})発\s*(\d{1,2}):(\d{2})着\s*\n\s*([^\n→]+)→([^\n]+)/g;
 
-  const bookingNumMatch = body.match(/(?:申込番号|予約番号)\s*[:：]?\s*(\d{4,})/);
-  const bookingNumber = bookingNumMatch ? bookingNumMatch[1] : null;
+  const bookingNumber = findBookingNumber(body);
 
   const bookings = [];
   let m;
@@ -214,9 +302,7 @@ function parseFerryMail(subject, body) {
       end: end,
       location: from,
       bookingNumber: bookingNumber,
-      description:
-        (bookingNumber ? '申込番号: ' + bookingNumber + '\n' : '') +
-        'メール件名: ' + subject + '\n\n' + AUTO_MARKER,
+      description: buildDescription(subject, bookingNumber),
     });
   }
   return bookings.length > 0 ? bookings : null;
@@ -264,15 +350,16 @@ function parseSalonMail(subject, body, received) {
   // 署名部から住所らしき行を拾う(都道府県で始まる行)
   const locMatch = body.match(/^\s*((?:北海道|東京都|大阪府|京都府|.{2,3}県)[^\n]+)$/m);
 
+  const bookingNumber = findBookingNumber(body);
+
   return [
     {
       title: title,
       start: start,
       end: end,
       location: locMatch ? locMatch[1].trim() : '',
-      bookingNumber: null,
-      description:
-        'メール件名: ' + subject + '\n\n' + AUTO_MARKER,
+      bookingNumber: bookingNumber,
+      description: buildDescription(subject, bookingNumber),
     },
   ];
 }
@@ -299,15 +386,16 @@ function parseGenericMail(subject, body, received) {
   );
   const end = new Date(start.getTime() + CONFIG.defaultDurationMinutes * 60 * 1000);
 
+  const bookingNumber = findBookingNumber(body);
+
   return [
     {
       title: '📅 ' + subject,
       start: start,
       end: end,
       location: '',
-      bookingNumber: null,
-      description:
-        'メール件名: ' + subject + '\n\n' + AUTO_MARKER,
+      bookingNumber: bookingNumber,
+      description: buildDescription(subject, bookingNumber),
     },
   ];
 }
