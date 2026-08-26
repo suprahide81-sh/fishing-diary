@@ -634,8 +634,72 @@ function handleSend() {
   dispatch(t);
 }
 
+// ============================================================
+//  重複テキスト対策（音声入力の二重取り込み・言い直し対策）
+// ============================================================
+// 比較用のキー。空白と句読点を落として表記ゆれを吸収する
+function normKey(s) {
+  return String(s || '').replace(/[\s　、。，．,.!！?？「」『』]/g, '').toLowerCase();
+}
+// 「晴れです晴れです」のように直後に同じ塊が続くパターンを1つにまとめる
+function collapseRepeats(t) {
+  let prev;
+  do { prev = t; t = t.replace(/(.{3,40}?)\1+/g, '$1'); } while (t !== prev);
+  return t;
+}
+// 句点で文に切り分ける（lookbehind非対応ブラウザでも動くよう手作業で分割）
+function splitSentences(t) {
+  const out = []; let buf = '';
+  for (const ch of t) { buf += ch; if ('。！？!?\n'.indexOf(ch) >= 0) { out.push(buf); buf = ''; } }
+  if (buf) out.push(buf);
+  return out;
+}
+// 同じ文が何度も並ぶパターンを1つにする
+function dedupeSentences(t) {
+  const seen = new Set(), out = [];
+  for (const s of splitSentences(t)) {
+    const k = normKey(s);
+    if (!k || seen.has(k)) continue;
+    seen.add(k); out.push(s);
+  }
+  return out.join('');
+}
+// 音声認識テキストの正規化。空白を整えたうえで重複を取り除く
+function dedupeSpeech(raw) {
+  if (!raw) return '';
+  let t = String(raw).replace(/[ \t　]+/g, ' ').trim();
+  t = collapseRepeats(t);
+  t = dedupeSentences(t);
+  return t.trim();
+}
+// 配列の中の同じ内容をまとめる（まとめ・書き出し用）
+function uniqTexts(arr) {
+  const seen = new Set(), out = [];
+  for (const v of arr || []) {
+    const k = normKey(v);
+    if (!k || seen.has(k)) continue;
+    seen.add(k); out.push(v);
+  }
+  return out;
+}
+function joinU(arr) { return uniqTexts(arr).join(', '); }
+// メモの重複をまとめる
+function uniqMemos(list) {
+  const seen = new Set(), out = [];
+  for (const m of list || []) {
+    const k = normKey(m.text);
+    if (!k || seen.has(k)) continue;
+    seen.add(k); out.push(m);
+  }
+  return out;
+}
+// 同じ内容／片方がもう一方を含む値をまとめてよいフィールド
+const MERGE_FIELDS = ['spot', 'lure', 'cond', 'water', 'wind'];
+
 // ===== DISPATCH =====
 function dispatch(text) {
+  text = dedupeSpeech(text);
+  if (!text) return;
   const sizeM = text.match(/(\d+(?:\.\d+)?)\s*(?:cm|センチ|センチメートル)/i);
   const countM = text.match(/(\d+)\s*(?:匹|本|尾)/);
   if (sizeM || countM) { addFish(text, sizeM, countM); return; }
@@ -691,6 +755,12 @@ function extractData(text) {
 
 // ===== FISH =====
 function addFish(text, sizeM, countM) {
+  text = dedupeSpeech(text);
+  const now = Date.now(), key = normKey(text);
+  // 同じ発話が二重に確定したときの二重記録を防ぐ
+  if (S.fish.length && normKey(S.fish[0].text) === key && now - (S.fish[0].ts || 0) < 60000) {
+    toast('🐟 同じ釣果は記録済みです'); return;
+  }
   const size = sizeM?.[1] || null;
   const count = countM?.[1] || '1';
   const lureKW = ['スピナーベイト','クランク','バイブ','ミノー','ポッパー','フロッグ','ワーム','ジグ','テキサス','ネコ','チャター','スイムベイト','ビッグベイト','トップ'];
@@ -704,7 +774,7 @@ function addFish(text, sizeM, countM) {
   const species = ['バス','ブラックバス','スモール','ラージ','ギル','ナマズ','コイ','シーバス','チヌ','メバル','アジ','トラウト','ニジマス','ヤマメ','アマゴ','イワナ'];
   let fish = 'バス';
   for (const s of species) { if (text.includes(s)) { fish = s; break; } }
-  S.fish.unshift({ size: size||'?', count, lure, fish, text, time: timeNow() });
+  S.fish.unshift({ size: size||'?', count, lure, fish, text, time: timeNow(), ts: now });
   if (size) addU('size', size+'cm');
   addU('count', count+'匹');
   if (lure !== '不明') addU('lure', lure);
@@ -716,10 +786,24 @@ function addFish(text, sizeM, countM) {
 
 // ===== MEMO =====
 function addMemo(text) {
-  S.memos.unshift({ text, time: timeNow() });
-  renderMemos(); updBadge();
-  switchTab('memo');
-  toast('📝 メモ追加');
+  const t = dedupeSpeech(text);
+  if (!t) return;
+  const key = normKey(t), now = Date.now(), prev = S.memos[0];
+  if (prev) {
+    const pk = normKey(prev.text);
+    if (pk === key) { toast('📝 同じ内容なので省略しました'); return; }
+    // 直前のメモの言い直し・続きなら上書きする（同じ言葉が並ばないように）
+    if (pk && key.indexOf(pk) === 0 && now - (prev.ts || 0) < 120000) {
+      prev.text = t; prev.ts = now; prev.time = timeNow();
+      renderMemos(); switchTab('memo'); toast('📝 メモを更新'); return;
+    }
+  }
+  // 直近3分以内の同じ内容は取り込まない（認識の二重確定対策）
+  if (S.memos.some(m => normKey(m.text) === key && now - (m.ts || 0) < 180000)) {
+    toast('📝 同じ内容なので省略しました'); return;
+  }
+  S.memos.unshift({ text: t, time: timeNow(), ts: now });
+  renderMemos(); updBadge(); switchTab('memo'); toast('📝 メモ追加');
 }
 
 // ===== RENDER =====
@@ -761,11 +845,11 @@ function renderMemos() {
 function renderSum() {
   const f = S.fields;
   const maxSz = S.fish.reduce((m,f) => Math.max(m, parseFloat(f.size)||0), 0);
-  const lures = [...new Set(S.fish.map(f=>f.lure).filter(l=>l!=='不明'))];
+  const lures = uniqTexts(S.fish.map(f=>f.lure).filter(l=>l!=='不明'));
   const rows = [
-    ['釣り場', f.spot.join(', ')||'未記録'],['天候', f.weather.join(', ')||'未記録'],
-    ['気温・水温', f.temp.join(', ')||'未記録'],['風', f.wind.join(', ')||'未記録'],
-    ['水の状態', f.water.join(', ')||'未記録'],['ルアー', f.lure.join(', ')||'未記録'],
+    ['釣り場', joinU(f.spot)||'未記録'],['天候', joinU(f.weather)||'未記録'],
+    ['気温・水温', joinU(f.temp)||'未記録'],['風', joinU(f.wind)||'未記録'],
+    ['水の状態', joinU(f.water)||'未記録'],['ルアー', joinU(f.lure)||'未記録'],
     ['総釣果', S.fish.length+'匹'],['最大サイズ', maxSz ? maxSz+'cm' : '未記録'],
     ['ヒットルアー', lures.join(', ')||'未記録'],['メモ数', S.memos.length+'件']
   ];
@@ -775,12 +859,27 @@ function renderSum() {
       ${rows.map(([k,v])=>`<div class="sum-row"><span class="sum-key">${k}</span><span class="sum-val">${v}</span></div>`).join('')}
     </div>
     ${S.fish.length?`<div class="sum-box"><div class="sum-title">🐟 釣果詳細</div>${S.fish.map((f,i)=>`<div class="sum-row"><span class="sum-key">${i+1}匹目 ${f.time}</span><span class="sum-val">${f.size}cm / ${f.lure}</span></div>`).join('')}</div>`:''}
-    ${S.memos.length?`<div class="sum-box"><div class="sum-title">📝 現場メモ</div>${S.memos.map(m=>`<div class="sum-row"><span class="sum-key">${m.time}</span><span class="sum-val">${m.text.substring(0,22)}${m.text.length>22?'…':''}</span></div>`).join('')}</div>`:''}
+    ${S.memos.length?`<div class="sum-box"><div class="sum-title">📝 現場メモ</div>${uniqMemos(S.memos).map(m=>`<div class="sum-row"><span class="sum-key">${m.time}</span><span class="sum-val">${m.text.substring(0,22)}${m.text.length>22?'…':''}</span></div>`).join('')}</div>`:''}
   `;
 }
 
 // ===== HELPERS =====
-function addU(field, val) { if (!val||!val.trim()) return; val=val.trim(); if (!S.fields[field].includes(val)) S.fields[field].push(val); }
+function addU(field, val) {
+  if (!val || !String(val).trim()) return;
+  val = dedupeSpeech(val);
+  if (!val) return;
+  const arr = S.fields[field], key = normKey(val);
+  if (!key) return;
+  for (let i = 0; i < arr.length; i++) {
+    const k = normKey(arr[i]);
+    if (k === key) return;                                   // 同じ内容は入れない
+    if (MERGE_FIELDS.indexOf(field) >= 0 && Math.min(k.length, key.length) >= 3) {
+      if (k.indexOf(key) >= 0) return;                       // 既存の方が詳しい
+      if (key.indexOf(k) >= 0) { arr[i] = val; return; }     // 新しい方が詳しい → 置き換え
+    }
+  }
+  arr.push(val);
+}
 function removeTag(f,i) { S.fields[f].splice(i,1); renderFields(); }
 function delFish(i) { S.fish.splice(i,1); renderFish(); updBadge(); }
 function delMemo(i) { S.memos.splice(i,1); renderMemos(); updBadge(); }
@@ -823,17 +922,17 @@ function exportLog() {
   const date = document.getElementById('hdrDate').textContent;
   const lines = [
     `【釣り日記 ${date}】`, '',
-    `▼ 釣り場　: ${f.spot.join(', ')||'未記録'}`,
-    `▼ 天候　　: ${f.weather.join(', ')||'未記録'}`,
-    `▼ 気温水温: ${f.temp.join(', ')||'未記録'}`,
-    `▼ 風　　　: ${f.wind.join(', ')||'未記録'}`,
-    `▼ 水の状態: ${f.water.join(', ')||'未記録'}`,
-    `▼ ルアー　: ${f.lure.join(', ')||'未記録'}`,
+    `▼ 釣り場　: ${joinU(f.spot)||'未記録'}`,
+    `▼ 天候　　: ${joinU(f.weather)||'未記録'}`,
+    `▼ 気温水温: ${joinU(f.temp)||'未記録'}`,
+    `▼ 風　　　: ${joinU(f.wind)||'未記録'}`,
+    `▼ 水の状態: ${joinU(f.water)||'未記録'}`,
+    `▼ ルアー　: ${joinU(f.lure)||'未記録'}`,
     `▼ 総釣果　: ${S.fish.length}匹`, '',
     '▼ 釣果ログ:',
     ...S.fish.map((f,i)=>`  ${i+1}. ${f.time} - ${f.size}cm [${f.lure}] ${f.fish}`), '',
     '▼ 現場メモ:',
-    ...S.memos.map(m=>`  ${m.time} - ${m.text}`)
+    ...uniqMemos(S.memos).map(m=>`  ${m.time} - ${m.text}`)
   ];
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));
@@ -845,28 +944,46 @@ function exportLog() {
 // ===== SPEECH RECOGNITION =====
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recog = null, isRec = false;
+// 端末によっては確定済みの結果が何度も送られてくるため、取り込み済みを覚えておく
+let srTaken = new Map();          // 結果index → 取り込み済みテキスト
+let srLastText = '', srLastAt = 0; // 直前に確定した文（再送を捨てるため）
 
 function toggleMic() {
   if (!SR) { toast('⚠️ このブラウザは音声入力非対応'); return; }
   isRec ? stopMic() : startMic();
 }
+// 確定テキストの取り込み口。重複を除いてから振り分ける
+function pushFinal(raw) {
+  const text = dedupeSpeech(raw);
+  if (!text) return;
+  const now = Date.now();
+  if (text === srLastText && now - srLastAt < 8000) return; // 同じ確定文の再送は捨てる
+  srLastText = text; srLastAt = now;
+  dispatch(text);
+}
 function startMic() {
   recog = new SR();
   recog.lang = 'ja-JP'; recog.continuous = true; recog.interimResults = true;
+  recog.maxAlternatives = 1;
   recog.onstart = () => {
     isRec = true;
+    srTaken = new Map();  // 再開のたびに結果indexが振り直されるのでクリア
     document.getElementById('micBtn').classList.add('rec');
     document.getElementById('micLabel').textContent = 'タップして停止';
     document.getElementById('recInfo').classList.add('show');
   };
   recog.onresult = e => {
     let interim='', final='';
-    for (let i=e.resultIndex; i<e.results.length; i++) {
-      const t=e.results[i][0].transcript;
-      e.results[i].isFinal ? (final+=t) : (interim+=t);
+    for (let i=0; i<e.results.length; i++) {
+      const r = e.results[i], t = (r[0] && r[0].transcript) || '';
+      if (!r.isFinal) { interim += t; continue; }
+      const prev = srTaken.get(i) || '';
+      if (t === prev) continue;                                    // 取り込み済み → 無視
+      srTaken.set(i, t);
+      final += (prev && t.indexOf(prev) === 0) ? t.slice(prev.length) : t; // 増えた分だけ取り込む
     }
-    document.getElementById('interimTxt').textContent = interim;
-    if (final.trim()) { document.getElementById('interimTxt').textContent=''; dispatch(final.trim()); }
+    document.getElementById('interimTxt').textContent = dedupeSpeech(interim);
+    if (final.trim()) { document.getElementById('interimTxt').textContent=''; pushFinal(final); }
   };
   recog.onerror = e => { if(e.error!=='no-speech') { stopMic(); toast('⚠️ マイクエラー: '+e.error); } };
   recog.onend = () => { if(isRec) { try{recog.start();}catch(e){} } };
@@ -874,6 +991,7 @@ function startMic() {
 }
 function stopMic() {
   isRec = false;
+  srTaken = new Map(); srLastText = ''; srLastAt = 0;
   try { recog?.stop(); } catch(e) {}
   document.getElementById('micBtn').classList.remove('rec');
   document.getElementById('micLabel').textContent = 'タップして音声入力';
