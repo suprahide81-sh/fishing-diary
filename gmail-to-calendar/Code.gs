@@ -19,8 +19,11 @@ const CONFIG = {
 
   // 予約メールを探すGmail検索クエリ(直近30日分)
   // ※処理済みのメールはラベルで除外されるので、期間が広くても二重登録はされない
+  // ※「予約が確定」のように助詞が挟まる書き方(Booking.com等)も拾えるようにしている
   searchQuery:
-    '{予約完了 予約確定 予約変更 予約キャンセル 予約取消 キャンセル完了 "ご予約ありがとうございます" "予約のお知らせ" "ご予約内容"} newer_than:30d',
+    '{予約完了 予約確定 予約変更 予約キャンセル 予約取消 キャンセル完了 ' +
+    '"予約が確定" "予約が完了" "予約を承り" "宿泊予約" チェックイン ' +
+    '"ご予約ありがとうございます" "予約のお知らせ" "ご予約内容" "予約内容"} newer_than:30d',
 
   // 処理済みスレッドに付けるラベル(二重登録防止)
   processedLabel: 'カレンダー登録済',
@@ -121,7 +124,9 @@ function syncBookingMailsToCalendar() {
  * または本文の完了表現(過去形)のみを対象にする。
  */
 function isCancellationMail(subject, body) {
-  if (/(予約|ご予約)の?(キャンセル|取消|取り消し)/.test(subject)) return true;
+  // 「予約がキャンセル」「ご予約の取消」等、助詞1文字までなら挟まってよい。
+  // 「予約内容の変更・キャンセル」のような注意書きは間隔が空くため一致しない。
+  if (/(予約|ご予約)(?:を|が|は|の)?(キャンセル|取消|取り消し)/.test(subject)) return true;
   if (/(キャンセル|取消|取り消し).{0,6}(完了|承りました)/.test(subject)) return true;
   return /(キャンセル|取消|取り消し)(を|が|は|手続きが)?.{0,10}(完了|承りました|受け付けました|受付けました|いたしました|致しました)/.test(
     body
@@ -264,9 +269,90 @@ function parseBookingMail(subject, body, received) {
   return (
     parseFerryMail(subject, body) ||
     parseSalonMail(subject, body, received) ||
+    parseHotelMail(subject, body, received) ||
     parseGenericMail(subject, body, received) ||
     []
   );
+}
+
+/**
+ * 「チェックイン 2026年9月21日月曜日 （14:00～20:00）」のように
+ * ラベルの後ろに続く日付(+時刻)を探す。時刻付きの記載を優先する。
+ * 戻り値: { date: Date, hasTime: boolean } / 見つからなければ null
+ */
+function findLabeledDateTime(body, label, received) {
+  const re = new RegExp(
+    label +
+      '[^\\n\\d]{0,12}' +
+      '(?:(\\d{4})[年/])?(\\d{1,2})[月/](\\d{1,2})日?' + // 日付
+      '(?:[^\\d\\n]{0,12}(\\d{1,2}):(\\d{2}))?', // 時刻(あれば)
+    'g'
+  );
+
+  let best = null;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    const hasTime = m[4] !== undefined;
+    const d = buildDate(
+      m[1] ? Number(m[1]) : null,
+      Number(m[2]),
+      Number(m[3]),
+      hasTime ? Number(m[4]) : 0,
+      hasTime ? Number(m[5]) : 0,
+      received
+    );
+    // 時刻まで書かれている記載を優先(冒頭の要約文より予約内容欄を採用する)
+    if (!best || (hasTime && !best.hasTime)) best = { date: d, hasTime: hasTime };
+    if (best.hasTime) break;
+  }
+  return best;
+}
+
+/**
+ * 宿泊系(Booking.com・楽天トラベル等):
+ *   チェックイン 2026年9月21日月曜日 （14:00～20:00）
+ *   チェックアウト 2026年9月22日火曜日 （08:00～10:00）
+ * チェックイン〜チェックアウトを1件の予定として登録する。
+ */
+function parseHotelMail(subject, body, received) {
+  const checkIn = findLabeledDateTime(body, 'チェックイン', received);
+  if (!checkIn) return null;
+
+  const checkOut = findLabeledDateTime(body, 'チェックアウト', received);
+
+  const start = checkIn.date;
+  let end;
+  if (checkOut && checkOut.date > start) {
+    end = checkOut.date;
+  } else {
+    // チェックアウトが読み取れなければ翌日10:00までとみなす
+    end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1, 10, 0);
+  }
+
+  const bookingNumber = findBookingNumber(body);
+
+  // 郵便番号から始まる行を住所として拾う
+  const locMatch = body.match(/〒\s*[\d０-９-]+\s*([^\n]+)/);
+
+  return [
+    {
+      title: '🏨 ' + extractHotelName(subject),
+      start: start,
+      end: end,
+      location: locMatch ? locMatch[1].trim() : '',
+      bookingNumber: bookingNumber,
+      description: buildDescription(subject, bookingNumber),
+    },
+  ];
+}
+
+/** 件名「◯◯の予約が確定しました！」から施設名「◯◯」を取り出す */
+function extractHotelName(subject) {
+  const cleaned = subject
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '')
+    .trim();
+  const m = cleaned.match(/^(.+?)(?:への|の)?(?:ご)?予約/);
+  return m && m[1].trim() ? m[1].trim() : cleaned || '宿泊';
 }
 
 /**
