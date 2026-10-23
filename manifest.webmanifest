@@ -1,0 +1,11 @@
+{
+  "name": "釣り日記",
+  "short_name": "釣り日記",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f9f7",
+  "theme_color": "#1a6b3a",
+  "lang": "ja",
+  "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
