@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>1年の秒時計</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#eef2f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1420" media="(prefers-color-scheme: dark)">
+<meta name="description" content="今年が始まってから何秒たったか、あと何秒で終わるかをひと目で見られる時計です。">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* レイアウト：中央に大きな秒カウンター → 1年の進み具合バー → 小さなカード3枚 → 説明 */
+:root {
+  --paper: #eef2f6;
+  --surface: #ffffff;
+  --cell-hi: #ffffff;
+  --cell: #f1f4f8;
+  --ink: #15202e;
+  --ink-2: #4b5a6b;
+  --ink-3: #7a8796;
+  --line: #d6dde6;
+  --ai: #2b4c9b;        /* 藍 */
+  --ai-soft: #dbe4f5;
+  --on-ai: #ffffff;
+  --kin: #9a6a06;       /* 山吹 */
+  --warn: #b3261e;
+  --shadow: rgba(21, 32, 46, 0.12);
+  --f-num: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1420;
+    --surface: #161f31;
+    --cell-hi: #1d2840;
+    --cell: #151d2f;
+    --ink: #e8edf5;
+    --ink-2: #a9b5c6;
+    --ink-3: #66748a;
+    --line: #283550;
+    --ai: #8fb0f2;
+    --ai-soft: #1f2d4b;
+    --on-ai: #0e1420;
+    --kin: #f0b941;
+    --warn: #ff8a80;
+    --shadow: rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1420;
+  --surface: #161f31;
+  --cell-hi: #1d2840;
+  --cell: #151d2f;
+  --ink: #e8edf5;
+  --ink-2: #a9b5c6;
+  --ink-3: #66748a;
+  --line: #283550;
+  --ai: #8fb0f2;
+  --ai-soft: #1f2d4b;
+  --on-ai: #0e1420;
+  --kin: #f0b941;
+  --warn: #ff8a80;
+  --shadow: rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+h2, p { margin: 0; }
+h2 { font-size: inherit; }
+.nw { white-space: nowrap; }
+button { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
+
+.app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  max-width: 820px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ===== ヘッダー ===== */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding-block: 16px 4px;
+}
+.brand { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
+.ring {
+  --p: 0;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ai) calc(var(--p) * 1%), var(--ai-soft) 0);
+}
+.ring::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--paper); }
+.tools { display: flex; gap: 8px; }
+.tbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 13px/1 var(--f-body);
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.tbtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tbtn[aria-pressed="true"] { color: var(--ai); background: var(--ai-soft); border-color: var(--ai); }
+.now { color: var(--ink-2); font-size: 15px; }
+.now .t { margin-left: 0.4em; font-family: var(--f-num); font-weight: 600; font-size: 19px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ===== メインの秒カウンター ===== */
+.main { flex: 1; display: flex; flex-direction: column; }
+.hero {
+  --d: clamp(34px, 12vw, 92px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-block: 28px 8px;
+}
+.seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--ai-soft); border-radius: 999px; }
+.seg button {
+  font: 700 15px/1 var(--f-body);
+  color: var(--ink-2);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] { color: var(--ai); background: var(--surface); box-shadow: 0 1px 3px var(--shadow); }
+.lead-label { margin-top: 22px; font-size: 17px; color: var(--ink-2); }
+.lead-label b { color: var(--ink); }
+.counter-row { display: flex; align-items: flex-end; gap: calc(var(--d) * 0.1); max-width: 100%; margin-top: 10px; }
+.counter { display: flex; gap: calc(var(--d) * 0.06); font-family: var(--f-num); font-weight: 600; font-size: var(--d); line-height: 1; }
+.cell {
+  display: grid;
+  place-items: center;
+  width: 0.66em;
+  height: 1.2em;
+  overflow: hidden;
+  background: linear-gradient(var(--cell-hi), var(--cell));
+  border: 1px solid var(--line);
+  border-radius: 0.1em;
+  box-shadow: 0 0.03em 0.08em var(--shadow);
+}
+.cell.lead { color: var(--ink-3); box-shadow: none; }
+.dig { display: block; }
+.comma { align-self: flex-end; width: 0.22em; padding-bottom: 0.06em; text-align: center; color: var(--ink-3); }
+.comma.lead { opacity: 0.4; }
+.unit { padding-bottom: calc(var(--d) * 0.08); font-size: calc(var(--d) * 0.36); font-weight: 700; color: var(--ink-2); }
+.equiv { margin-top: 14px; font-size: 15px; color: var(--ink-2); }
+.equiv b { font-family: var(--f-num); font-weight: 600; font-size: 21px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ===== 1年の進み具合 ===== */
+.prog { margin-top: 32px; }
+.prog-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.prog-h h2, .card-h h2 { font-size: 14px; font-weight: 700; color: var(--ink-2); letter-spacing: 0.04em; }
+.pct { font-family: var(--f-num); font-weight: 600; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.pct small { margin-left: 2px; font-size: 16px; color: var(--ink-2); }
+.bar { position: relative; height: 16px; border-radius: 8px; background: var(--ai-soft); overflow: hidden; }
+.bar.mini { height: 6px; border-radius: 3px; }
+.fill { position: absolute; inset: 0 auto 0 0; background: var(--ai); }
+.fill::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 3px; background: var(--kin); }
+.bar.mini .fill::after { width: 2px; }
+.ticks { position: absolute; inset: 0; }
+.ticks i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--paper); opacity: 0.85; }
+.months { display: flex; margin-top: 6px; }
+.months span { flex: 0 0 auto; text-align: center; font-family: var(--f-num); font-weight: 500; font-size: 14px; color: var(--ink-3); }
+.months small { font-family: var(--f-body); font-size: 10px; }
+.months .is-now { color: var(--ai); font-weight: 600; }
+@media (max-width: 520px) { .months small { display: none; } }
+
+/* ===== カード ===== */
+.cards { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 32px; }
+@media (min-width: 680px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-h h2 { overflow-wrap: anywhere; }
+.chip { flex: none; padding: 1px 8px; font-size: 11px; font-weight: 700; color: var(--kin); border: 1px solid currentColor; border-radius: 999px; }
+.card-v { font-family: var(--f-num); font-weight: 600; font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.card-v .u { margin-left: 4px; font-family: var(--f-body); font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.card-s { font-size: 13px; color: var(--ink-2); }
+.card-f { margin-top: auto; padding-top: 8px; font-size: 13px; color: var(--ink-2); }
+.link {
+  padding: 6px 0;
+  font: 700 14px/1 var(--f-body);
+  color: var(--ai);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* 大切な日の入力 */
+.ev-view { display: contents; }
+.ev-form { display: grid; gap: 8px; }
+.ev-form label { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.ev-form input[type="text"], .ev-form input[type="date"] {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  font: 16px var(--f-body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.ev-form .check { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 400; color: var(--ink); }
+.ev-form .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--ai); }
+.err { font-size: 13px; color: var(--warn); }
+.form-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.btn {
+  padding: 10px 14px;
+  font: 700 14px/1 var(--f-body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn.primary { color: var(--on-ai); background: var(--ai); border-color: var(--ai); }
+.btn.quiet { margin-left: auto; color: var(--ink-2); }
+
+/* ===== 説明 ===== */
+.foot { display: grid; gap: 6px; margin-top: 36px; padding-block: 20px 32px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.foot .formula { font-size: 14px; color: var(--ink); }
+.foot b { font-family: var(--f-num); font-weight: 600; font-size: 17px; }
+.foot a { color: var(--ai); text-underline-offset: 3px; }
+
+/* ===== お知らせ ===== */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  max-width: calc(100% - 32px);
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px var(--shadow);
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ===== 大きく表示（置き時計モード） ===== */
+body.focus .app { max-width: none; }
+body.focus .cards, body.focus .foot { display: none; }
+body.focus .main { justify-content: center; padding-bottom: 24px; }
+body.focus .hero { --d: clamp(34px, min(12.5vw, 24vh), 220px); }
+body.focus .prog { width: 100%; max-width: 1100px; margin-inline: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="app" lang="ja">
+  <header class="top">
+    <div class="brand"><span class="ring" id="brand-ring" aria-hidden="true"></span><span>1年の秒時計</span></div>
+    <div class="tools">
+      <button class="tbtn" id="wake" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <span>画面を消さない</span>
+      </button>
+      <button class="tbtn" id="focus" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        <span id="focus-label">大きく表示</span>
+      </button>
+    </div>
+  </header>
+  <p class="now"><span id="today-date"></span><span class="t" id="today-time"></span></p>
+
+  <main class="main">
+    <section class="hero" aria-labelledby="lead-label">
+      <div class="seg" role="group" aria-label="表示の切り替え">
+        <button type="button" id="m-elapsed" aria-pressed="true">経過した秒</button>
+        <button type="button" id="m-remain" aria-pressed="false">残りの秒</button>
+      </div>
+      <p class="lead-label" id="lead-label"></p>
+      <div class="counter-row">
+        <div class="counter" id="counter" role="img" aria-label=""></div>
+        <span class="unit" aria-hidden="true">秒</span>
+      </div>
+      <p class="equiv" id="equiv"></p>
+    </section>
+
+    <section class="prog" aria-labelledby="prog-h">
+      <div class="prog-h">
+        <h2 id="prog-h">今年の進み具合</h2>
+        <p class="pct"><span id="pct">0.0000</span><small>%</small></p>
+      </div>
+      <div class="bar"><div class="fill" id="fill"></div><div class="ticks" id="ticks"></div></div>
+      <div class="months" id="months" aria-hidden="true"></div>
+    </section>
+
+    <div class="cards">
+      <section class="card" aria-labelledby="day-h">
+        <div class="card-h"><h2 id="day-h">今日の秒</h2></div>
+        <p class="card-v"><span id="day-v">0</span><span class="u">/ <span id="day-total">86,400</span> 秒</span></p>
+        <p class="card-s" id="day-s"></p>
+        <div class="card-f"><div class="bar mini"><div class="fill" id="day-fill"></div></div></div>
+      </section>
+
+      <section class="card" aria-labelledby="ms-h">
+        <div class="card-h"><h2 id="ms-h">次の節目（100万秒ごと）</h2></div>
+        <p class="card-v"><span id="ms-v">0</span><span class="u">秒</span></p>
+        <p class="card-s" id="ms-s"></p>
+        <div class="card-f" id="ms-f"></div>
+      </section>
+
+      <section class="card" aria-labelledby="ev-h">
+        <div class="card-h"><h2 id="ev-h">大切な日まで</h2><span class="chip" id="ev-chip" hidden>例</span></div>
+        <div class="ev-view" id="ev-view">
+          <div id="ev-body">
+            <p class="card-v"><span id="ev-v">0</span><span class="u" id="ev-u">秒</span></p>
+            <p class="card-s" id="ev-s"></p>
+          </div>
+          <p class="card-s" id="ev-empty" hidden>誕生日や旅行の日など、大切な日までの秒数を数えます。</p>
+          <div class="card-f"><button class="link" id="ev-edit" type="button">自分の日を入れる</button></div>
+        </div>
+        <form class="ev-form" id="ev-form" novalidate hidden>
+          <label for="ev-name">名前</label>
+          <input id="ev-name" type="text" maxlength="20" placeholder="誕生日" autocomplete="off">
+          <label for="ev-date">日付</label>
+          <input id="ev-date" type="date">
+          <label class="check" for="ev-yearly"><input id="ev-yearly" type="checkbox">毎年くり返す（誕生日など）</label>
+          <p class="err" id="ev-err" hidden>日付を選んでください。</p>
+          <div class="form-btns">
+            <button class="btn primary" type="submit">保存</button>
+            <button class="btn" id="ev-cancel" type="button">やめる</button>
+            <button class="btn quiet" id="ev-remove" type="button">消す</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p class="formula" id="formula"></p>
+    <p id="leap-note"></p>
+    <p>時刻はこの端末の時計で数えています。大切な日の設定は、この端末の中にだけ保存されます。</p>
+    <p class="foot-link"><a href="privacy.html">プライバシーポリシー</a></p>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const KEY = 'year-seconds-clock.v1';
+  const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+  const DAY_MS = 86400000;
+  const MILESTONE = 1000000;
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => n.toLocaleString('ja-JP');
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const dateJa = (d) => `${d.getMonth() + 1}月${d.getDate()}日（${WEEK[d.getDay()]}）`;
+  const timeJa = (d) => `${d.getHours()}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // ===== 設定の保存（この端末だけ） =====
+  const settings = (() => {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+  })();
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* 保存できなくても時計は動く */ }
+  };
+  if (settings.event && !/^\d{4}-\d{2}-\d{2}$/.test(settings.event.date || '')) delete settings.event;
+  let mode = settings.mode === 'remain' ? 'remain' : 'elapsed';
+
+  // ===== 1年・1日の秒数 =====
+  // 端末のタイムゾーンで「1月1日 0:00」から数える。うるう年は自動で366日になる。
+  function yearInfo(now) {
+    const y = now.getFullYear();
+    const start = new Date(y, 0, 1);
+    const end = new Date(y + 1, 0, 1);
+    const total = Math.round((end - start) / 1000);
+    const elapsed = Math.floor((now - start) / 1000);
+    return { y, start, end, total, elapsed, remain: total - elapsed };
+  }
+  function dayInfo(now) {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const total = Math.round((end - start) / 1000);
+    const elapsed = Math.floor((now - start) / 1000);
+    return { total, elapsed, remain: total - elapsed };
+  }
+
+  // ===== 秒カウンター（8けた） =====
+  const cells = [];
+  const commas = [];
+  (() => {
+    const box = $('counter');
+    for (let i = 0; i < 8; i++) {
+      if (i === 2 || i === 5) {
+        const c = document.createElement('span');
+        c.className = 'comma';
+        c.textContent = ',';
+        box.append(c);
+        commas.push({ el: c, at: i });
+      }
+      const cell = document.createElement('span');
+      const dig = document.createElement('span');
+      cell.className = 'cell';
+      dig.className = 'dig';
+      cell.append(dig);
+      box.append(cell);
+      cells.push({ cell, dig, v: '' });
+    }
+  })();
+
+  function renderCounter(n, animate, dir) {
+    const s = String(n).padStart(8, '0');
+    const first = s.search(/[1-9]/);
+    const lead = first === -1 ? 7 : first;
+    cells.forEach((c, i) => {
+      c.cell.classList.toggle('lead', i < lead);
+      if (c.v === s[i]) return;
+      c.dig.textContent = s[i];
+      if (animate && c.v !== '' && !reduceMotion.matches && c.dig.animate) {
+        c.dig.animate(
+          [{ transform: `translateY(${dir * 60}%)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+          { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' }
+        );
+      }
+      c.v = s[i];
+    });
+    commas.forEach((c) => c.el.classList.toggle('lead', c.at <= lead));
+    $('counter').setAttribute('aria-label', `${fmt(n)}秒`);
+  }
+
+  function equivHtml(sec) {
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `つまり <b>${d}</b>日 <b>${h}</b>時間 <b>${pad2(m)}</b>分 <b>${pad2(s)}</b>秒`;
+  }
+
+  // ===== 月の目盛り（実際の日数どおりの幅） =====
+  let builtYear = null;
+  function buildMonths(yi) {
+    const months = $('months');
+    const ticks = $('ticks');
+    const span = yi.end - yi.start;
+    months.textContent = '';
+    ticks.textContent = '';
+    for (let m = 0; m < 12; m++) {
+      const a = new Date(yi.y, m, 1);
+      const b = new Date(yi.y, m + 1, 1);
+      const label = document.createElement('span');
+      label.style.flexBasis = `${((b - a) / span) * 100}%`;
+      label.innerHTML = `${m + 1}<small>月</small>`;
+      months.append(label);
+      if (m > 0) {
+        const t = document.createElement('i');
+        t.style.left = `${((a - yi.start) / span) * 100}%`;
+        ticks.append(t);
+      }
+    }
+    const days = Math.round(yi.total / 86400);
+    $('formula').innerHTML = `1年 = ${days}日 × 24時間 × 60分 × 60秒 = <span class="nw"><b>${fmt(yi.total)}</b> 秒</span>`;
+    $('leap-note').textContent = days === 366
+      ? `${yi.y}年はうるう年なので、いつもの年（365日 = 31,536,000秒）より 86,400秒 長くなっています。`
+      : 'うるう年（366日）の年は 31,622,400秒 になります。';
+    builtYear = yi.y;
+  }
+
+  // ===== 大切な日 =====
+  function currentEvent(now) {
+    if (settings.event === null) return null;
+    if (settings.event) return settings.event;
+    return { name: 'クリスマス', date: `${now.getFullYear()}-12-25`, yearly: true, example: true };
+  }
+
+  function eventState(ev, now) {
+    const [Y, M, D] = ev.date.split('-').map(Number);
+    let t = new Date(Y, M - 1, D);
+    if (ev.yearly) {
+      t = new Date(now.getFullYear(), M - 1, D);
+      if (now >= new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)) {
+        t = new Date(now.getFullYear() + 1, M - 1, D);
+      }
+    }
+    const dayEnd = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const days = Math.round(Math.abs(t - today) / DAY_MS);
+    if (now < t) return { kind: 'until', t, days, sec: Math.ceil((t - now) / 1000) };
+    if (now < dayEnd) return { kind: 'today', t };
+    return { kind: 'since', t, days, sec: Math.floor((now - t) / 1000) };
+  }
+
+  function renderEvent(now) {
+    const ev = currentEvent(now);
+    $('ev-body').hidden = !ev;
+    $('ev-empty').hidden = !!ev;
+    $('ev-chip').hidden = !(ev && ev.example);
+    $('ev-edit').textContent = ev && !ev.example ? '変更する' : '自分の日を入れる';
+    if (!ev) {
+      $('ev-h').textContent = '大切な日まで';
+      return;
+    }
+    const st = eventState(ev, now);
+    const withYear = (d) => (d.getFullYear() === now.getFullYear() ? '' : `${d.getFullYear()}年`) + dateJa(d);
+    $('ev-u').hidden = st.kind === 'today';
+    if (st.kind === 'until') {
+      $('ev-h').textContent = `${ev.name}まで`;
+      $('ev-v').textContent = fmt(st.sec);
+      $('ev-s').innerHTML = `${withYear(st.t)}まで、<span class="nw">あと${st.days}日</span>`;
+    } else if (st.kind === 'today') {
+      $('ev-h').textContent = ev.name;
+      $('ev-v').textContent = '今日';
+      $('ev-s').textContent = `${dateJa(st.t)}、今日がその日です`;
+    } else {
+      $('ev-h').textContent = `${ev.name}から`;
+      $('ev-v').textContent = fmt(st.sec);
+      $('ev-s').innerHTML = `${withYear(st.t)}から <span class="nw">${st.days}日たちました</span>`;
+    }
+  }
+
+  const form = $('ev-form');
+  function openForm() {
+    const ev = currentEvent(new Date());
+    const own = ev && !ev.example;
+    $('ev-name').value = own ? ev.name : '';
+    $('ev-date').value = own ? ev.date : '';
+    $('ev-yearly').checked = own ? !!ev.yearly : false;
+    $('ev-remove').hidden = !own;
+    $('ev-err').hidden = true;
+    $('ev-view').hidden = true;
+    $('ev-chip').hidden = true;
+    form.hidden = false;
+    $('ev-name').focus();
+  }
+  function closeForm() {
+    form.hidden = true;
+    $('ev-view').hidden = false;
+    renderEvent(new Date());
+    $('ev-edit').focus();
+  }
+  $('ev-edit').addEventListener('click', openForm);
+  $('ev-cancel').addEventListener('click', closeForm);
+  $('ev-remove').addEventListener('click', () => {
+    settings.event = null;
+    save();
+    closeForm();
+  });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const date = $('ev-date').value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      $('ev-err').hidden = false;
+      $('ev-date').focus();
+      return;
+    }
+    settings.event = { name: $('ev-name').value.trim() || '大切な日', date, yearly: $('ev-yearly').checked };
+    save();
+    closeForm();
+  });
+
+  // ===== お知らせ =====
+  let toastTimer;
+  function toast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+  }
+
+  // ===== 毎秒の更新 =====
+  let last = null;
+  function tick(animate) {
+    const now = new Date();
+    const yi = yearInfo(now);
+    const di = dayInfo(now);
+    if (builtYear !== yi.y) buildMonths(yi);
+
+    $('today-date').textContent = `${yi.y}年${dateJa(now)}`;
+    $('today-time').textContent = timeJa(now);
+
+    const value = mode === 'elapsed' ? yi.elapsed : yi.remain;
+    $('lead-label').innerHTML = mode === 'elapsed'
+      ? `<b>${yi.y}年</b>が始まってから`
+      : `<b>${yi.y}年</b>が終わるまで、あと`;
+    renderCounter(value, animate, mode === 'elapsed' ? 1 : -1);
+    $('equiv').innerHTML = equivHtml(value);
+
+    const pct = (yi.elapsed / yi.total) * 100;
+    $('pct').textContent = pct.toFixed(4);
+    $('fill').style.width = `${pct}%`;
+    $('brand-ring').style.setProperty('--p', pct);
+    [...$('months').children].forEach((el, i) => el.classList.toggle('is-now', i === now.getMonth()));
+
+    $('day-v').textContent = fmt(di.elapsed);
+    $('day-total').textContent = fmt(di.total);
+    $('day-s').textContent = `今日はあと ${fmt(di.remain)} 秒`;
+    $('day-fill').style.width = `${(di.elapsed / di.total) * 100}%`;
+
+    const next = Math.min((Math.floor(yi.elapsed / MILESTONE) + 1) * MILESTONE, yi.total);
+    const at = new Date(yi.start.getTime() + next * 1000);
+    $('ms-v').textContent = fmt(next);
+    $('ms-s').textContent = next === yi.total
+      ? '年越しの瞬間（1月1日 0:00:00）に到達'
+      : `${dateJa(at)} ${timeJa(at)} に到達`;
+    $('ms-f').textContent = `あと ${fmt(next - yi.elapsed)} 秒`;
+
+    if (animate && last) {
+      const passed = Math.floor(yi.elapsed / MILESTONE) * MILESTONE;
+      if (last.y === yi.y && yi.elapsed - last.elapsed <= 3 && passed > last.elapsed) {
+        toast(`今年 ${fmt(passed)} 秒を通過しました`);
+      } else if (last.y < yi.y && last.remain <= 3) {
+        toast(`${yi.y}年になりました。また 0 秒から数えます`);
+      }
+    }
+    last = yi;
+
+    if (form.hidden) renderEvent(now);
+  }
+
+  let timer;
+  function loop() {
+    tick(true);
+    timer = setTimeout(loop, 1000 - (Date.now() % 1000) + 15);
+  }
+  function restart() {
+    clearTimeout(timer);
+    tick(false);
+    timer = setTimeout(loop, 1000 - (Date.now() % 1000) + 15);
+  }
+
+  // ===== 経過／残りの切り替え =====
+  function showMode() {
+    $('m-elapsed').setAttribute('aria-pressed', mode === 'elapsed');
+    $('m-remain').setAttribute('aria-pressed', mode === 'remain');
+  }
+  function setMode(m) {
+    if (mode === m) return;
+    mode = m;
+    settings.mode = m;
+    save();
+    showMode();
+    tick(false);
+  }
+  $('m-elapsed').addEventListener('click', () => setMode('elapsed'));
+  $('m-remain').addEventListener('click', () => setMode('remain'));
+
+  // ===== 画面を消さない（スリープ防止） =====
+  let wakeLock = null;
+  let wantWake = false;
+  const wakeBtn = $('wake');
+  if (!('wakeLock' in navigator)) wakeBtn.hidden = true;
+  const showWake = () => wakeBtn.setAttribute('aria-pressed', wantWake);
+  async function getWake() {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  wakeBtn.addEventListener('click', async () => {
+    if (wantWake) {
+      wantWake = false;
+      if (wakeLock) wakeLock.release();
+      toast('画面のスリープ防止をやめました');
+    } else if (await getWake()) {
+      wantWake = true;
+      toast('この画面を開いている間、画面が消えないようにしました');
+    } else {
+      toast('この環境では画面のスリープ防止を使えませんでした');
+    }
+    showWake();
+  });
+
+  // ===== 大きく表示（置き時計モード） =====
+  let focusOn = false;
+  let fsByUs = false;
+  async function setFocus(on) {
+    focusOn = on;
+    document.body.classList.toggle('focus', on);
+    $('focus').setAttribute('aria-pressed', on);
+    $('focus-label').textContent = on ? 'もとに戻す' : '大きく表示';
+    if (on && document.fullscreenEnabled && !document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen();
+        fsByUs = true;
+      } catch (e) { /* 全画面にできなくても、大きく表示はそのまま使える */ }
+    } else if (!on && fsByUs && document.fullscreenElement) {
+      fsByUs = false;
+      try { await document.exitFullscreen(); } catch (e) { /* すでに解除済み */ }
+    }
+  }
+  $('focus').addEventListener('click', () => setFocus(!focusOn));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && focusOn) setFocus(false);
+  });
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && fsByUs) {
+      fsByUs = false;
+      if (focusOn) setFocus(false);
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    restart();
+    if (wantWake && !wakeLock) getWake();
+  });
+
+  showMode();
+  restart();
+
+  // ===== オフライン対応（ホーム画面に追加・アプリ化用） =====
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* 使えない環境ではふつうのWebページとして動く */ });
+  }
+})();
+</script>
+</body>
+</html>

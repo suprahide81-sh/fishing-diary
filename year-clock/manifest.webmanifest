@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "1年の秒時計",
+  "short_name": "秒時計",
+  "description": "今年が始まってから何秒たったか、あと何秒で終わるかをひと目で見られる時計です。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef2f6",
+  "theme_color": "#2b4c9b",
+  "categories": ["utilities", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
