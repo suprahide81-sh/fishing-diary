@@ -24,6 +24,10 @@ const LINE_CHANNEL_ACCESS_TOKEN = 'ここにチャネルアクセストークン
 // 自動生成する。空のままでもキーワード辞書方式で動く。
 const GEMINI_API_KEY = '';
 
+// 使うGeminiのモデル。古いモデルは提供終了することがあるので、上から順に試す
+// ('gemini-flash-latest' は、その時点で最新のFlashモデルを指す別名)
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
+
 const LINE_CONFIG = {
   // 予定を入れるカレンダー。'primary' ならデフォルトカレンダー
   calendarId: 'primary',
@@ -140,12 +144,14 @@ function handleImageMessage(ev) {
   showLoadingAnimation(ev.source.userId);
 
   const now = new Date();
+  lastErrorReason = '';
   const image = fetchLineImage(ev.message.id);
   const data = image ? readEventsFromImageWithGemini(image, now) : null;
   if (!data) {
     replyToLine(
       ev.replyToken,
-      '画像を読み取れませんでした🙏\nしばらくしてから、もう一度送ってみてください。'
+      '画像を読み取れませんでした🙏\nしばらくしてから、もう一度送ってみてください。' +
+        (lastErrorReason ? '\n\n(原因: ' + lastErrorReason + ')' : '')
     );
     return;
   }
@@ -208,6 +214,7 @@ function fetchLineImage(messageId) {
     }
   );
   if (res.getResponseCode() !== 200) {
+    lastErrorReason = 'LINEの画像取得 ' + res.getResponseCode();
     Logger.log('画像の取得に失敗: ' + res.getResponseCode() + ' ' + res.getContentText().slice(0, 300));
     return null;
   }
@@ -221,17 +228,56 @@ function showLoadingAnimation(userId) {
     method: 'post',
     contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
-    payload: JSON.stringify({ chatId: userId, loadingSeconds: 30 }),
+    payload: JSON.stringify({ chatId: userId, loadingSeconds: 60 }),
     muteHttpExceptions: true,
   });
+}
+
+// 直近の失敗理由(LINEの返事に添えて、原因を調べやすくする)
+let lastErrorReason = '';
+
+/**
+ * Gemini APIを呼び、返ってきた本文の文字列を返す。
+ * モデルが使えなければ GEMINI_MODELS の次のモデルを試す。全部ダメなら null(理由は lastErrorReason)
+ */
+function callGemini(parts, generationConfig) {
+  const errors = [];
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const model = GEMINI_MODELS[i];
+    const res = UrlFetchApp.fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + model +
+        ':generateContent?key=' + GEMINI_API_KEY,
+      {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: generationConfig }),
+        muteHttpExceptions: true,
+      }
+    );
+    if (res.getResponseCode() !== 200) {
+      errors.push('Gemini ' + res.getResponseCode() + ' ' + model);
+      Logger.log('Gemini APIエラー(' + model + '): ' + res.getContentText().slice(0, 300));
+      continue;
+    }
+    const body = JSON.parse(res.getContentText());
+    const cand = body.candidates && body.candidates[0];
+    // 思考(thought)部分を除いた本文だけをつなげる
+    const text = ((cand && cand.content && cand.content.parts) || [])
+      .filter(function (p) { return p.text && !p.thought; })
+      .map(function (p) { return p.text; })
+      .join('')
+      .trim();
+    if (text) return text;
+    errors.push('Geminiの返事が空 ' + model + ' ' + ((cand && cand.finishReason) || ''));
+    Logger.log('Geminiの返事が空(' + model + '): ' + res.getContentText().slice(0, 300));
+  }
+  lastErrorReason = errors.join(' / ');
+  return null;
 }
 
 /** Geminiに画像を渡し、写っている予定をJSONで返してもらう。失敗時は null */
 function readEventsFromImageWithGemini(blob, now) {
   try {
-    const url =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' +
-      GEMINI_API_KEY;
     const today =
       now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' +
       ('0' + now.getDate()).slice(-2) + '(' + '日月火水木金土'[now.getDay()] + ')';
@@ -253,64 +299,42 @@ function readEventsFromImageWithGemini(blob, now) {
       '予定がなければ events を空の配列にする。';
 
     const str = { type: 'STRING' };
-    const res = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                inline_data: {
-                  mime_type: blob.getContentType() || 'image/jpeg',
-                  data: Utilities.base64Encode(blob.getBytes()),
-                },
-              },
-              { text: prompt },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 8192,
-          thinkingConfig: { thinkingBudget: 2048 },
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'OBJECT',
-            properties: {
-              events: {
-                type: 'ARRAY',
-                items: {
-                  type: 'OBJECT',
-                  properties: { title: str, date: str, start: str, end: str, location: str, memo: str },
-                  required: ['title', 'date'],
-                },
-              },
-            },
-            required: ['events'],
+    const text = callGemini(
+      [
+        {
+          inline_data: {
+            mime_type: blob.getContentType() || 'image/jpeg',
+            data: Utilities.base64Encode(blob.getBytes()),
           },
         },
-      }),
-      muteHttpExceptions: true,
-    });
-    if (res.getResponseCode() !== 200) {
-      Logger.log('Gemini APIエラー(画像): ' + res.getContentText().slice(0, 300));
-      return null;
-    }
-    const body = JSON.parse(res.getContentText());
-    const parts =
-      body.candidates &&
-      body.candidates[0] &&
-      body.candidates[0].content &&
-      body.candidates[0].content.parts;
-    if (!parts) return null;
-    // 思考(thought)部分を除いた本文だけをつなげる
-    const text = parts
-      .filter(function (p) { return p.text && !p.thought; })
-      .map(function (p) { return p.text; })
-      .join('');
-    return parseGeminiJson(text);
+        { text: prompt },
+      ],
+      {
+        temperature: 0.1,
+        maxOutputTokens: 16384,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            events: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: { title: str, date: str, start: str, end: str, location: str, memo: str },
+                required: ['title', 'date'],
+              },
+            },
+          },
+          required: ['events'],
+        },
+      }
+    );
+    if (!text) return null;
+    const data = parseGeminiJson(text);
+    if (!data) lastErrorReason = 'Geminiの返事がJSONとして読めない';
+    return data;
   } catch (err) {
+    lastErrorReason = String(err).slice(0, 100);
     Logger.log('Gemini画像読み取りに失敗: ' + err);
     return null;
   }
@@ -413,9 +437,6 @@ function makeEventTitle(text, fallback) {
 /** Gemini APIで短いタイトルを生成する。失敗時は null */
 function generateTitleWithGemini(text) {
   try {
-    const url =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' +
-      GEMINI_API_KEY;
     const prompt =
       '次のLINEメッセージは、ある予定について話しています。' +
       'カレンダーに登録する短いタイトルを日本語で1つだけ出力してください。\n' +
@@ -424,26 +445,7 @@ function generateTitleWithGemini(text) {
       '- タイトルの文字列だけを出力し、説明・引用符・記号は付けない\n\n' +
       'メッセージ:\n' + text;
 
-    const res = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 500, temperature: 0.2 },
-      }),
-      muteHttpExceptions: true,
-    });
-    if (res.getResponseCode() !== 200) {
-      Logger.log('Gemini APIエラー: ' + res.getContentText().slice(0, 300));
-      return null;
-    }
-    const data = JSON.parse(res.getContentText());
-    let title =
-      data.candidates &&
-      data.candidates[0] &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts[0].text;
+    let title = callGemini([{ text: prompt }], { maxOutputTokens: 4096, temperature: 0.2 });
     if (!title) return null;
 
     title = title.replace(/[\n\r"'「」『』]/g, ' ').replace(/\s+/g, ' ').trim();
