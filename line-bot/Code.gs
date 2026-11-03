@@ -25,8 +25,8 @@ const LINE_CHANNEL_ACCESS_TOKEN = 'ここにチャネルアクセストークン
 const GEMINI_API_KEY = '';
 
 // 使うGeminiのモデル。古いモデルは提供終了することがあるので、上から順に試す
-// ('gemini-flash-latest' は、その時点で最新のFlashモデルを指す別名)
-const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
+// ('gemini-flash-latest' は、その時点で最新のFlashモデルを指す別名。-lite は軽量版で混雑しにくい)
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
 
 const LINE_CONFIG = {
   // 予定を入れるカレンダー。'primary' ならデフォルトカレンダー
@@ -150,7 +150,11 @@ function handleImageMessage(ev) {
   if (!data) {
     replyToLine(
       ev.replyToken,
-      '画像を読み取れませんでした🙏\nしばらくしてから、もう一度送ってみてください。' +
+      '画像を読み取れませんでした🙏\n' +
+        (lastErrorReason.indexOf('503') !== -1
+          ? 'AI(Gemini)が混み合っているようです。数分おいてから'
+          : 'しばらくしてから、') +
+        'もう一度送ってみてください。' +
         (lastErrorReason ? '\n\n(原因: ' + lastErrorReason + ')' : '')
     );
     return;
@@ -238,22 +242,29 @@ let lastErrorReason = '';
 
 /**
  * Gemini APIを呼び、返ってきた本文の文字列を返す。
- * モデルが使えなければ GEMINI_MODELS の次のモデルを試す。全部ダメなら null(理由は lastErrorReason)
+ * 混雑(500/503)なら少し待って1回だけやり直し、それでもダメなら GEMINI_MODELS の次のモデルを試す。
+ * 全部ダメなら null(理由は lastErrorReason)
  */
 function callGemini(parts, generationConfig) {
   const errors = [];
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const model = GEMINI_MODELS[i];
-    const res = UrlFetchApp.fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + model +
-        ':generateContent?key=' + GEMINI_API_KEY,
-      {
-        method: 'post',
-        contentType: 'application/json',
-        payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: generationConfig }),
-        muteHttpExceptions: true,
-      }
-    );
+    let res;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) Utilities.sleep(3000);
+      res = UrlFetchApp.fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' + model +
+          ':generateContent?key=' + GEMINI_API_KEY,
+        {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify({ contents: [{ parts: parts }], generationConfig: generationConfig }),
+          muteHttpExceptions: true,
+        }
+      );
+      const code = res.getResponseCode();
+      if (code !== 500 && code !== 503) break;
+    }
     if (res.getResponseCode() !== 200) {
       errors.push('Gemini ' + res.getResponseCode() + ' ' + model);
       Logger.log('Gemini APIエラー(' + model + '): ' + res.getContentText().slice(0, 300));
