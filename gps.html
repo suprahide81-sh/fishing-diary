@@ -384,6 +384,45 @@ body.theme-wabi .toast { color:var(--surface); }
 .ico-chip small { font-size:9px; color:var(--text2); font-weight:700; }
 .ico-chip.sel { border-color:var(--water); background:var(--water-p); }
 
+/* ========================================
+   追従・PDF地図の位置合わせ
+======================================== */
+.back-btn {
+  position:absolute; left:50%; bottom:64px; transform:translateX(-50%); z-index:600;
+  display:none; padding:11px 20px; border:none; border-radius:24px;
+  background:var(--water); color:#fff; font-size:14px; font-weight:700;
+  box-shadow:var(--shadow-lg); cursor:pointer; white-space:nowrap;
+}
+.back-btn.show { display:block; }
+body.theme-dark .leaflet-chart-pane { filter:brightness(.6) contrast(1.1); }
+.xhair { position:absolute; left:50%; top:50%; width:48px; height:48px; margin:-24px 0 0 -24px; pointer-events:none; z-index:700; }
+.xhair::before, .xhair::after { content:''; position:absolute; background:#ff1744; box-shadow:0 0 0 1px rgba(255,255,255,.9); }
+.xhair::before { left:23px; top:0; width:2px; height:48px; }
+.xhair::after { top:23px; left:0; width:48px; height:2px; }
+.pick { position:absolute; inset:0; z-index:1100; pointer-events:none; display:none; }
+.pick.show { display:block; }
+.pick.full { position:fixed; z-index:1900; pointer-events:auto; background:#3a3f44; }
+.pick-map { position:absolute; inset:0; background:#3a3f44; }
+.pick-top, .pick-btm { position:absolute; left:10px; right:10px; z-index:800; pointer-events:auto; }
+.pick-top {
+  top:10px; background:var(--surface); color:var(--text); border-radius:12px;
+  padding:10px 12px; font-size:13px; font-weight:700; line-height:1.6; box-shadow:var(--shadow-lg);
+}
+.pick-top small { display:block; font-size:11px; font-weight:400; color:var(--text2); }
+.pick-btm { bottom:calc(16px + env(safe-area-inset-bottom)); display:flex; gap:8px; }
+.pick-btm .modal-btn { box-shadow:var(--shadow-lg); }
+.pick-pt {
+  background:#ff1744; color:#fff; border:2px solid #fff; border-radius:50%;
+  font-size:13px; font-weight:700; text-align:center; line-height:22px;
+}
+.f-row { display:flex; align-items:center; gap:6px; }
+.f-row .f-inp { flex:1; min-width:0; }
+.f-row span { font-size:15px; font-weight:700; color:var(--text2); }
+.op-row { display:flex; align-items:center; gap:10px; margin-top:8px; font-size:11px; font-weight:700; color:var(--text2); }
+.op-row input { flex:1; accent-color:var(--water); }
+.item.chart { border-left-color:var(--primary); }
+.set-sub a { color:var(--water); }
+
 ::-webkit-scrollbar { width:3px; }
 ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 </style>
@@ -435,6 +474,15 @@ body.theme-wabi .toast { color:var(--surface); }
         <button class="goto-x" onclick="setGoto(null)">✕</button>
       </div>
     </div>
+    <button class="back-btn" id="backBtn" onclick="setFollow(true)">◎ 現在地に戻る</button>
+    <div class="pick" id="mapPick">
+      <div class="xhair"></div>
+      <div class="pick-top" id="mapPickMsg"></div>
+      <div class="pick-btm">
+        <button class="modal-btn btn-cancel" onclick="pickCancel()">やめる</button>
+        <button class="modal-btn btn-pri" onclick="pickMapOk()">この位置に決定</button>
+      </div>
+    </div>
   </div>
 
   <!-- WAYPOINTS -->
@@ -455,6 +503,12 @@ body.theme-wabi .toast { color:var(--surface); }
 
   <!-- SETTINGS -->
   <div class="view scroll" id="view-set">
+    <div class="sec-hd">等深線図など（PDF地図）</div>
+    <div class="set-card">
+      <button class="tool-btn" style="width:100%" onclick="$('pdfIn').click()">📄 PDF・画像の地図を取り込む</button>
+      <div class="set-sub">国土地理院の<a href="https://www.gsi.go.jp/kankyochiri/lakedata.html" target="_blank" rel="noopener">湖沼データ</a>（等深線の入った湖沼図）などのPDFを取り込み、2か所の位置を合わせて地図に重ねます。取り込んだ地図は端末に保存され、表示に通信は使いません。</div>
+    </div>
+    <div class="list" id="chartList" style="margin-bottom:16px"></div>
     <div class="sec-hd">表示・記録</div>
     <div class="set-card">
       <div class="set-lbl">速度の単位</div>
@@ -477,6 +531,7 @@ body.theme-wabi .toast { color:var(--surface); }
         <li>GPSと画面ONで電池を多く使います。モバイルバッテリーがあると安心です。</li>
         <li>地図の表示にはネット接続が必要です。電波がない場所でも航跡・ポイントの記録は続きます。</li>
         <li>データはこの端末のブラウザ内に保存されます。<b>ホーム画面に追加</b>して使い、大事な航跡・ポイントは<b>GPXで書き出して</b>バックアップしてください。</li>
+        <li>地図は現在地を中心に動きます。指で地図を大きく動かすと止まり、「◎ 現在地に戻る」で戻ります（移動中は15秒で自動的に戻ります）。</li>
         <li>地図を長押しすると、その場所をポイント登録できます。</li>
         <li>スマホのGPS精度は数m〜十数mです。航行の安全は海図や船の計器で確認してください。</li>
       </ul>
@@ -492,6 +547,16 @@ body.theme-wabi .toast { color:var(--surface); }
 </div>
 
 <input type="file" id="gpxIn" hidden onchange="importGpx(this.files[0]); this.value=''">
+<input type="file" id="pdfIn" hidden accept=".pdf,application/pdf,image/*" onchange="importChart(this.files[0]); this.value=''">
+<div class="pick full" id="imgPick">
+  <div class="pick-map" id="imgPickMap"></div>
+  <div class="xhair"></div>
+  <div class="pick-top" id="imgPickMsg"></div>
+  <div class="pick-btm">
+    <button class="modal-btn btn-cancel" onclick="pickCancel()">やめる</button>
+    <button class="modal-btn btn-pri" onclick="pickImgOk()">この点に決定</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <div class="overlay" id="ov" onclick="if(event.target===this)closeSheet()">
   <div class="modal" id="ovBox"></div>
@@ -508,6 +573,9 @@ const STALE_MS  = 15000;         // 測位がこの時間来なければ「信�
 const ARRIVE_M  = 30;            // 目的ポイント到着とみなす距離 (m)
 const RESUME_MS = 6 * 3600000;   // 再読み込み時、これより古い記録中データは自動で終了
 const KN = 1.943844;             // m/s → ノット
+const BACK_MS   = 15000;         // 移動中は地図から指を離してこの時間で現在地に戻る
+const BACK_MPS  = 1.5;           // 「移動中」とみなす速さ（約5km/h・3ノット）
+const DRAG_PX   = 50;            // これより小さいドラッグは揺れによる誤操作とみなして追従を続ける
 const CUR_COLOR = '#ff1744', OLD_COLOR = '#ff9100', GOTO_COLOR = '#2979ff';
 const ICONS = [['🐟','釣れた'],['🪨','根・岩'],['🏗','漁礁'],['🌀','潮目'],['🛟','ブイ'],['⚓','アンカー'],['⚠️','危険'],['📍','その他']];
 
@@ -524,9 +592,10 @@ function loadJSON(k) { try { return JSON.parse(load(k)) || {}; } catch(e) { retu
 //  STATE
 // ============================================================
 const P = Object.assign({ spd:'kn', coord:'dm', step:10 }, loadJSON('gpsPrefs'));
-const S = { wpts:[], tracks:[], rec:null, shown:new Set(), goto:null };
+const S = { wpts:[], tracks:[], charts:[], rec:null, shown:new Set(), goto:null };
 // fix=最新の測位, hist=直近15秒の測位（速度・針路の補完用）
-const G = { fix:null, fixAt:0, spd:null, cog:null, hist:[], err:'', follow:true, centered:false, arrived:false, lastFixT:0 };
+const G = { fix:null, fixAt:0, prevFixAt:0, spd:null, cog:null, hist:[], err:'', arrived:false, lastFixT:0,
+  follow:true, centered:false, dragging:false, zooming:false, popup:false, picking:false, unfollowAt:0, touchAt:0 };
 try { (JSON.parse(load('gpsShown')) || []).forEach(id => S.shown.add(id)); } catch(e) {}
 
 // ============================================================
@@ -574,11 +643,11 @@ let _db = null, _dbWarned = false, _persisted = false;
 function idb() {
   if (_db) return Promise.resolve(_db);
   return new Promise((res, rej) => {
-    const r = indexedDB.open('fishingGps', 1);
+    const r = indexedDB.open('fishingGps', 2);
     r.onupgradeneeded = () => {
-      r.result.createObjectStore('tracks', { keyPath:'id' });
-      r.result.createObjectStore('wpts', { keyPath:'id' });
+      for (const n of ['tracks', 'wpts', 'charts']) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath:'id' });
     };
+    r.onblocked = () => toast('⚠️ このアプリを開いている他のタブを閉じてください');
     r.onsuccess = () => { _db = r.result; res(_db); };
     r.onerror = () => rej(r.error);
   });
@@ -614,7 +683,10 @@ function initMap() {
     return;
   }
   const v = loadJSON('gpsView');
-  map = L.map('map', { zoomControl:false, minZoom:5, maxZoom:20 }).setView(v.c || [35.0, 135.5], v.z || 6);
+  // 追従中は拡大・縮小を画面の中心（＝自船）で行う
+  map = L.map('map', { zoomControl:false, minZoom:5, maxZoom:20, touchZoom:'center', doubleClickZoom:'center', scrollWheelZoom:'center' })
+    .setView(v.c || [35.0, 135.5], v.z || 6);
+  map.createPane('chartPane').style.zIndex = 250;   // 取り込んだPDF地図は背景地図の上・航跡の下
   const gsiAttr = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>';
   const gsi = (path, ext) => L.tileLayer(`https://cyberjapandata.gsi.go.jp/xyz/${path}/{z}/{x}/{y}.${ext}`, { maxNativeZoom:18, maxZoom:20, attribution:gsiAttr });
   const bases = {
@@ -626,7 +698,7 @@ function initMap() {
   const seamark = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxNativeZoom:18, maxZoom:20, attribution:'&copy; <a href="https://www.openseamap.org" target="_blank">OpenSeaMap</a>' });
   (bases[load('gpsBase')] || bases['地図（地理院）']).addTo(map);
   if (load('gpsSeamark') === '1') seamark.addTo(map);
-  L.control.layers(bases, { '航路標識（OpenSeaMap）': seamark }, { position:'bottomleft' }).addTo(map);
+  layerCtl = L.control.layers(bases, { '航路標識（OpenSeaMap）': seamark }, { position:'bottomleft' }).addTo(map);
   L.control.zoom({ position:'bottomright' }).addTo(map);
   const Follow = L.Control.extend({
     options: { position:'bottomright' },
@@ -640,24 +712,77 @@ function initMap() {
   });
   new Follow().addTo(map);
   map.on('baselayerchange', e => store('gpsBase', e.name));
-  map.on('overlayadd', () => store('gpsSeamark', '1'));
-  map.on('overlayremove', () => store('gpsSeamark', '0'));
-  map.on('dragstart', () => setFollow(false));
+  map.on('overlayadd overlayremove', e => {
+    const on = e.type === 'overlayadd', c = e.layer.c;
+    if (e.layer === seamark) store('gpsSeamark', on ? '1' : '0');
+    else if (c && c.show !== on) { c.show = on; dbPut('charts', c); renderCharts(); }
+  });
+  map.on('dragstart', () => { G.dragging = true; });
+  map.on('dragend', onDragEnd);
+  map.on('zoomstart', () => { G.zooming = true; endGlide(); });
+  map.on('zoomend', () => { G.zooming = false; if (G.follow && !G.dragging) centerOnBoat(); });
+  map.on('popupopen', () => { G.popup = true; if (G.follow) setFollow(false); });
+  map.on('popupclose', () => { G.popup = false; });
+  ['pointerdown', 'wheel'].forEach(t => map.getContainer().addEventListener(t, () => { G.touchAt = Date.now(); }, { passive:true }));
   map.on('moveend', () => { const c = map.getCenter(); store('gpsView', JSON.stringify({ c:[c.lat, c.lng], z:map.getZoom() })); });
   map.on('contextmenu', e => openWptSheet(null, e.latlng));   // 長押しでポイント登録
 }
 
+// ============================================================
+//  追従（カーナビのように自船を画面の中心に保つ）
+// ============================================================
 function setFollow(on) {
   G.follow = on;
+  if (!on) G.unfollowAt = Date.now();
+  if (map) map.options.touchZoom = map.options.doubleClickZoom = map.options.scrollWheelZoom = on ? 'center' : true;
   const b = $('followBtn'); if (b) b.classList.toggle('on', on);
-  if (on && map && G.fix) map.setView([G.fix.lat, G.fix.lng], Math.max(map.getZoom(), 15));
+  renderBack();
+  if (on) centerOnBoat();
 }
+function renderBack() { $('backBtn').classList.toggle('show', !!map && !G.follow && !!G.fix && !G.picking); }
+function centerOnBoat() {
+  if (!map || !boatMk) return;
+  endGlide();
+  map.setView(boatMk.getLatLng(), map.getZoom(), { animate:false });
+}
+function onDragEnd() {
+  G.dragging = false;
+  if (!G.follow || !boatMk) return;
+  // 揺れる船・車の中で少し触れただけなら追従を続ける
+  const off = map.latLngToContainerPoint(boatMk.getLatLng()).distanceTo(map.getSize().divideBy(2));
+  if (off > DRAG_PX) setFollow(false); else centerOnBoat();
+}
+// 移動中なら、地図から指を離して BACK_MS で現在地に戻す
+function autoFollowBack() {
+  if (!map || G.follow || G.dragging || G.popup || G.picking || !fixFresh() || !(G.spd >= BACK_MPS)) return;
+  if (Date.now() - Math.max(G.touchAt, G.unfollowAt) > BACK_MS) setFollow(true);
+}
+
+// 測位と測位の間を補間して、自船マーカーと地図を同じ速さで滑らかに動かす
+let _glide = null, _glideRaf = 0;
+function placeBoat(ll) {
+  boatMk.setLatLng(ll);
+  if (accCircle) accCircle.setLatLng(ll);
+  mapGotoLine(ll);
+}
+function glideTo(ll, ms) {
+  _glide = { from:boatMk.getLatLng(), to:L.latLng(ll), t0:performance.now(), ms };
+  if (!_glideRaf) _glideRaf = requestAnimationFrame(glideStep);
+}
+function glideStep(now) {
+  _glideRaf = 0;
+  const g = _glide; if (!g) return;
+  const k = Math.max(0, Math.min(1, (now - g.t0) / g.ms));
+  placeBoat(L.latLng(g.from.lat + (g.to.lat - g.from.lat) * k, g.from.lng + (g.to.lng - g.from.lng) * k));
+  if (k < 1) _glideRaf = requestAnimationFrame(glideStep); else _glide = null;
+}
+function endGlide() { if (_glide) { placeBoat(_glide.to); _glide = null; } }
 
 function mapUpdPos() {
   if (!map || !G.fix) return;
-  const ll = [G.fix.lat, G.fix.lng], cog = curCog(), kind = cog == null ? 'dot' : 'arrow';
+  const ll = L.latLng(G.fix.lat, G.fix.lng), cog = curCog(), kind = cog == null ? 'dot' : 'arrow';
   if (!accCircle) accCircle = L.circle(ll, { radius:G.fix.acc, color:GOTO_COLOR, weight:1, opacity:.5, fillOpacity:.08, interactive:false }).addTo(map);
-  else accCircle.setLatLng(ll).setRadius(G.fix.acc);
+  else accCircle.setRadius(G.fix.acc);
   if (kind !== boatKind) {
     boatKind = kind;
     const html = kind === 'dot' ? '<div class="boat-dot"></div>'
@@ -666,14 +791,18 @@ function mapUpdPos() {
     if (!boatMk) boatMk = L.marker(ll, { icon, zIndexOffset:1000, interactive:false, keyboard:false }).addTo(map);
     else boatMk.setIcon(icon);
   }
-  boatMk.setLatLng(ll);
   const svg = boatMk.getElement() && boatMk.getElement().querySelector('svg');
   if (svg) svg.style.transform = `rotate(${cog}deg)`;
-  if (G.follow) {
-    if (!G.centered) { G.centered = true; map.setView(ll, Math.max(map.getZoom(), 15)); }
-    else map.panTo(ll);
+  // 次の測位までの時間（≒前回の間隔）をかけて動かす。大きく飛んだときは一気に動かす
+  const ms = Math.min(1500, Math.max(300, G.fixAt - G.prevFixAt));
+  const jump = G.zooming || map.latLngToContainerPoint(boatMk.getLatLng()).distanceTo(map.latLngToContainerPoint(ll)) > 200;
+  if (jump) { _glide = null; placeBoat(ll); } else glideTo(ll, ms);
+  if (G.follow && !G.dragging && !G.zooming) {
+    if (!G.centered) { G.centered = true; map.setView(ll, Math.max(map.getZoom(), 15), { animate:false }); }
+    else if (jump) map.setView(ll, map.getZoom(), { animate:false });
+    else map.panTo(ll, { animate:true, duration:ms / 1000, easeLinearity:1, noMoveStart:true });
   }
-  mapGotoLine();
+  renderBack();
 }
 
 const lineOf = seg => seg.map(p => [p[0], p[1]]);
@@ -725,11 +854,11 @@ function wptPopup(id) {
       <button onclick="openWptSheet('${w.id}')">✏️ 編集</button>
     </div></div>`;
 }
-function mapGotoLine() {
+function mapGotoLine(from) {
   if (!map) return;
-  const w = gotoWpt();
-  if (!w || !G.fix) { if (gotoLine) { gotoLine.remove(); gotoLine = null; } return; }
-  const lls = [[G.fix.lat, G.fix.lng], [w.lat, w.lng]];
+  const w = gotoWpt(), f = from || (boatMk && boatMk.getLatLng());
+  if (!w || !f) { if (gotoLine) { gotoLine.remove(); gotoLine = null; } return; }
+  const lls = [f, [w.lat, w.lng]];
   if (gotoLine) gotoLine.setLatLngs(lls);
   else gotoLine = L.polyline(lls, { color:GOTO_COLOR, weight:3, dashArray:'8 8', interactive:false }).addTo(map);
 }
@@ -769,7 +898,7 @@ function onPos(pos) {
   }
   if (spd != null) G.spd = (G.spd == null || now - G.fixAt > STALE_MS) ? spd : G.spd * 0.5 + spd * 0.5;
   if (cog != null) G.cog = cog;
-  G.fix = fix; G.fixAt = now; G.err = '';
+  G.prevFixAt = G.fixAt; G.fix = fix; G.fixAt = now; G.err = '';
   recordFix(fix);
   mapUpdPos(); checkArrive();
   renderHud(); renderStatus(); renderGoto();
@@ -948,7 +1077,7 @@ function setGoto(id) {
   mapGotoLine(); renderGoto(); renderWpts();
   keepAwake(needAwake());
   const w = gotoWpt();
-  if (w) { sw('map'); toast(`🎯 ${w.name} へ案内します`); }
+  if (w) { sw('map'); setFollow(true); toast(`🎯 ${w.name} へ案内します`); }
 }
 function checkArrive() {
   const w = gotoWpt(); if (!w || !G.fix) return;
@@ -1199,10 +1328,276 @@ function sw(t) {
 let _tick = 0;
 setInterval(() => {
   _tick++;
-  renderHud(); renderStatus(); renderGoto();
+  renderHud(); renderStatus(); renderGoto(); autoFollowBack();
   if (S.rec && $('view-trk').classList.contains('on')) { const el = $('trk-' + S.rec.id); if (el) el.outerHTML = trackItem(S.rec); }
   if (_tick % 3 === 0 && $('view-wpt').classList.contains('on')) updWptDists();
 }, 1000);
+
+// ============================================================
+//  PDF地図（等深線図など）の取り込みと位置合わせ
+// ============================================================
+const PDFJS = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+const CHART_MAX_PX = 12e6;       // 画像にするときの最大画素数（iPhoneのcanvas上限 約1670万画素より小さく）
+const chartLayers = new Map();
+let layerCtl = null, _pdfjs = null, AL = null, pickMap = null;   // AL = 位置合わせ中の状態
+
+// 3つの角（左上・右上・左下）の緯度経度に合わせて、回転も含めて画像を貼るレイヤー
+const ChartLayer = window.L && L.Layer.extend({
+  options: { pane:'chartPane' },
+  initialize(c) { this.c = c; this._url = URL.createObjectURL(c.img); },
+  onAdd() {
+    const im = this._img = L.DomUtil.create('img', 'leaflet-image-layer ' + (this._map._zoomAnimated ? 'leaflet-zoom-animated' : 'leaflet-zoom-hide'));
+    im.src = this._url; im.alt = '';
+    im.style.cssText = `width:${this.c.w}px;height:${this.c.h}px;transform-origin:0 0;pointer-events:none;opacity:${this.c.opacity}`;
+    this.getPane().appendChild(im);
+    this._reset();
+  },
+  onRemove() { L.DomUtil.remove(this._img); this._img = null; },
+  getEvents() {
+    const e = { zoom:this._reset, viewreset:this._reset };
+    if (this._map._zoomAnimated) e.zoomanim = this._animZoom;
+    return e;
+  },
+  setOpacity(o) { if (this._img) this._img.style.opacity = o; },
+  dispose() { URL.revokeObjectURL(this._url); },
+  _place(pt) {
+    const k = this.c.corners, tl = pt(k.tl), tr = pt(k.tr), bl = pt(k.bl), W = this.c.w, H = this.c.h;
+    this._img.style.transform = `matrix(${(tr.x - tl.x) / W},${(tr.y - tl.y) / W},${(bl.x - tl.x) / H},${(bl.y - tl.y) / H},${tl.x},${tl.y})`;
+  },
+  _reset() { if (this._img) this._place(ll => this._map.latLngToLayerPoint(ll)); },
+  _animZoom(e) { if (this._img) this._place(ll => this._map._latLngToNewLayerPoint(L.latLng(ll), e.zoom, e.center)); }
+});
+
+// 2点の対応から、画像の左上・右上・左下の緯度経度を求める（回転・拡大・平行移動）
+function chartCorners(c) {
+  const [a, b] = c.pts, Z = 20, crs = L.CRS.EPSG3857;
+  const A = crs.latLngToPoint(L.latLng(a.lat, a.lng), Z), B = crs.latLngToPoint(L.latLng(b.lat, b.lng), Z);
+  const du = b.u - a.u, dv = b.v - a.v, dX = B.x - A.x, dY = B.y - A.y, den = du * du + dv * dv;
+  const re = (dX * du + dY * dv) / den, im = (dY * du - dX * dv) / den;   // 複素数 (dX+i·dY)/(du+i·dv)
+  const at = (u, v) => { const ll = crs.pointToLatLng(L.point(A.x + re * (u - a.u) - im * (v - a.v), A.y + im * (u - a.u) + re * (v - a.v)), Z); return [ll.lat, ll.lng]; };
+  return { tl:at(0, 0), tr:at(c.w, 0), bl:at(0, c.h), br:at(c.w, c.h) };
+}
+
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return _pdfjs || (_pdfjs = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = PDFJS + 'pdf.min.js';
+    sc.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+    sc.crossOrigin = 'anonymous';
+    sc.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(pdfjsLib); };
+    sc.onerror = () => { _pdfjs = null; rej(new Error('PDFの読み込み部品を取得できません。電波のある所で試してください')); };
+    document.head.appendChild(sc);
+  }));
+}
+function askPageNo(n) {
+  return new Promise(res => {
+    openSheet(`<div class="modal-title">ページを選ぶ</div>
+      <div class="modal-body">このPDFは${n}ページあります。取り込むページの番号を入れてください。</div>
+      <input class="f-inp" id="pgInp" type="number" inputmode="numeric" min="1" max="${n}" value="1">
+      <div class="modal-btns" style="margin-top:16px"><button class="modal-btn btn-cancel" onclick="closeSheet()">やめる</button>
+      <button class="modal-btn btn-pri" onclick="sheetOk()">取り込む</button></div>`,
+      () => { const v = Math.round(+$('pgInp').value); res(v >= 1 && v <= n ? v : 1); });
+    _ovCancel = () => res(0);
+  });
+}
+async function renderPdf(file) {
+  toast('📄 PDFを読み込み中…');
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data:new Uint8Array(await file.arrayBuffer()) }).promise;
+  try {
+    let no = 1;
+    if (pdf.numPages > 1 && !(no = await askPageNo(pdf.numPages))) return null;
+    const page = await pdf.getPage(no), v1 = page.getViewport({ scale:1 });
+    const vp = page.getViewport({ scale:Math.min(5, Math.sqrt(CHART_MAX_PX / (v1.width * v1.height))) });
+    const cv = document.createElement('canvas');
+    cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    toast('📄 地図を画像にしています…');
+    await page.render({ canvasContext:ctx, viewport:vp }).promise;
+    return cv;
+  } finally { pdf.destroy(); }
+}
+async function renderImage(file) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, Math.sqrt(CHART_MAX_PX / (bmp.width * bmp.height)));
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+  cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+  if (bmp.close) bmp.close();
+  return cv;
+}
+async function importChart(file) {
+  if (!file) return;
+  if (!map) { toast('⚠️ 地図が使えない状態です'); return; }
+  try {
+    const cv = /pdf/i.test(file.type) || /\.pdf$/i.test(file.name) ? await renderPdf(file) : await renderImage(file);
+    if (!cv) return;
+    const img = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.9));
+    const c = { id:uid(), name:file.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'PDF地図', img, w:cv.width, h:cv.height, pts:[], opacity:0.8, show:true, t:Date.now() };
+    cv.width = cv.height = 0;   // メモリを早めに解放
+    alignStart(c);
+  } catch (e) { toast('⚠️ 読み込めませんでした：' + (e.message || e)); }
+}
+
+// ---- 位置合わせ：PDF上の点 → その点の緯度経度、を2か所 ----
+function alignStart(c) {
+  AL = { c, pts:[], i:0, url:URL.createObjectURL(c.img), wasShown:c.show };
+  const ly = chartLayers.get(c.id); if (ly) ly.remove();   // やり直し中は古い位置の表示を消す
+  openSheet(`<div class="modal-title">📐 位置合わせ（2か所）</div>
+    <div class="modal-body">PDFの中で<b>緯度・経度が分かる場所</b>を、なるべく離れた2か所（左上と右下など）選びます。<br>
+    ・地図の枠にある緯度・経度の目盛り（四隅など）<br>
+    ・目盛りがなければ、岬の先・橋・堤防の角など、地図でも分かる目印</div>
+    <div class="modal-btns"><button class="modal-btn btn-cancel" onclick="closeSheet()">やめる</button>
+    <button class="modal-btn btn-pri" onclick="sheetOk()">はじめる</button></div>`, pickImg);
+  _ovCancel = alignCancel;
+}
+function alignEnd() {
+  if (!AL) return;
+  URL.revokeObjectURL(AL.url);
+  const { c, wasShown } = AL; AL = null;
+  if (c.corners && (c.show || wasShown)) { const ly = chartLayer(c); if (ly) ly.addTo(map); }
+}
+function alignCancel() { alignEnd(); toast('位置合わせをやめました'); }
+function pickImg() {
+  const c = AL.c;
+  $('imgPickMsg').innerHTML = `${AL.i ? '②' : '①'} ${AL.i + 1}点目：十字をPDFの中の場所に合わせてください<small>指で動かす・2本指で拡大できます</small>`;
+  $('imgPick').classList.add('show');
+  if (pickMap) pickMap.remove();
+  pickMap = L.map('imgPickMap', { crs:L.CRS.Simple, minZoom:-8, maxZoom:4, zoomSnap:0, zoomControl:false, attributionControl:false,
+    touchZoom:'center', doubleClickZoom:'center', scrollWheelZoom:'center', bounceAtZoomLimits:false });
+  const b = [[0, 0], [c.h, c.w]];          // 画像の(u,v) は CRS.Simple の [h - v, u]
+  L.imageOverlay(AL.url, b).addTo(pickMap);
+  pickMap.fitBounds(b);
+  const p0 = AL.pts[0];
+  if (AL.i === 1 && p0) L.marker([c.h - p0.v, p0.u], { interactive:false, icon:L.divIcon({ className:'pick-pt', html:'1', iconSize:[24,24] }) }).addTo(pickMap);
+}
+function pickImgOk() {
+  const c = AL.c, m = pickMap.getCenter();
+  const u = Math.round(Math.max(0, Math.min(c.w, m.lng))), v = Math.round(Math.max(0, Math.min(c.h, c.h - m.lat)));
+  closePick();
+  askCoord(u, v);
+}
+function askCoord(u, v) {
+  const old = AL.c.pts[AL.i];   // やり直しなら前回の値を入れておく
+  const dmv = x => { if (x == null) return ['', '']; const d = Math.floor(x + 1e-9); return [d, +((x - d) * 60).toFixed(4)]; };
+  const [aD, aM] = dmv(old && old.lat), [oD, oM] = dmv(old && old.lng);
+  openSheet(`<div class="modal-title">${AL.i + 1}点目の緯度・経度</div>
+    <div class="f-lbl">北緯</div>
+    <div class="f-row"><input class="f-inp" id="laD" inputmode="decimal" value="${aD}" placeholder="34"><span>°</span><input class="f-inp" id="laM" inputmode="decimal" value="${aM}" placeholder="36.5"><span>'</span></div>
+    <div class="f-lbl">東経</div>
+    <div class="f-row"><input class="f-inp" id="loD" inputmode="decimal" value="${oD}" placeholder="135"><span>°</span><input class="f-inp" id="loM" inputmode="decimal" value="${oM}" placeholder="12.25"><span>'</span></div>
+    <div class="set-sub">「34.6083」のような度だけの数字は左の欄だけに入れます。秒は分に直してください（30秒＝0.5分）。目盛りがない場所は「地図で指定」。</div>
+    <div class="modal-btns" style="margin-top:16px"><button class="modal-btn btn-cancel" onclick="pickOnMap(${u},${v})">🗺 地図で指定</button>
+    <button class="modal-btn btn-pri" onclick="coordOk(${u},${v})">${AL.i ? '完了' : '次へ'}</button></div>`);
+  _ovCancel = alignCancel;
+}
+function coordOk(u, v) {
+  const raw = id => $(id).value.trim().replace(/[０-９．]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  const num = id => raw(id) === '' ? 0 : Number(raw(id));
+  const lat = num('laD') + num('laM') / 60, lng = num('loD') + num('loM') / 60;
+  if (!raw('laD') || !raw('loD') || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || num('laM') >= 60 || num('loM') >= 60) {
+    toast('⚠️ 緯度・経度を確かめてください'); return;
+  }
+  _ovCancel = null; closeSheet();
+  alignNext({ u, v, lat, lng });
+}
+function pickOnMap(u, v) {
+  _ovCancel = null; closeSheet();
+  AL.uv = [u, v];
+  sw('map'); setFollow(false); G.picking = true; renderBack();
+  const ref = AL.c.pts[AL.i] || AL.pts[0];
+  if (ref) map.setView([ref.lat, ref.lng], Math.max(map.getZoom(), 14), { animate:false });
+  $('mapPickMsg').innerHTML = `${AL.i ? '②' : '①'} ${AL.i + 1}点目：PDFで選んだ場所に十字を合わせてください<small>地図を指で動かして合わせます</small>`;
+  $('mapPick').classList.add('show');
+}
+function pickMapOk() {
+  const m = map.getCenter(), [u, v] = AL.uv;
+  closePick();
+  alignNext({ u, v, lat:m.lat, lng:m.lng });
+}
+function pickCancel() { closePick(); alignCancel(); }
+function closePick() {
+  $('imgPick').classList.remove('show'); $('mapPick').classList.remove('show');
+  if (pickMap) { pickMap.remove(); pickMap = null; }
+  G.picking = false; renderBack();
+}
+function alignNext(p) {
+  AL.pts[AL.i] = p;
+  if (AL.i === 0) { AL.i = 1; pickImg(); return; }
+  const [a, b] = AL.pts, c = AL.c;
+  if (Math.hypot(a.u - b.u, a.v - b.v) < Math.hypot(c.w, c.h) * 0.1 || distLL(a.lat, a.lng, b.lat, b.lng) < 20) {
+    toast('⚠️ 2か所が近すぎます。2点目を離れた場所で選び直してください');
+    pickImg(); return;
+  }
+  const isNew = !S.charts.includes(c);
+  c.pts = AL.pts; c.corners = chartCorners(c); c.show = true;
+  if (isNew) S.charts.push(c);
+  dbPut('charts', c); persistStorage();
+  alignEnd(); renderCharts();
+  fitPoints([c.corners.tl, c.corners.tr, c.corners.bl, c.corners.br]);
+  toast('🗾 地図に重ねました');
+}
+
+// ---- 取り込んだ地図の一覧と操作 ----
+const findChart = id => S.charts.find(c => c.id === id);
+function chartLayer(c) {
+  let ly = chartLayers.get(c.id);
+  if (!ly && map && c.corners) {
+    ly = new ChartLayer(c); chartLayers.set(c.id, ly);
+    layerCtl.addOverlay(ly, '🗾 ' + esc(c.name));
+  }
+  return ly;
+}
+function renderCharts() {
+  $('chartList').innerHTML = S.charts.map(c => `<div class="item chart">
+    <div class="it-name">🗾 ${esc(c.name)}</div>
+    <div class="it-sub">${c.w}×${c.h}px・${(c.img.size / 1048576).toFixed(1)}MB・${fmtDate(c.t)}取り込み</div>
+    <div class="op-row">濃さ<input type="range" min="20" max="100" value="${Math.round(c.opacity * 100)}" oninput="chartOpacity('${c.id}',this.value)" onchange="chartOpacity('${c.id}',this.value,true)"></div>
+    <div class="it-btns">
+      <button class="it-btn${c.show ? ' on' : ''}" onclick="chartShow('${c.id}',${!c.show})">👁 ${c.show ? '表示中' : '表示'}</button>
+      <button class="it-btn" onclick="chartView('${c.id}')">🗺 地図で見る</button>
+      <button class="it-btn" onclick="chartRealign('${c.id}')">📐 位置合わせ</button>
+      <button class="it-btn" onclick="chartRename('${c.id}')">✏️ 名前</button>
+      <button class="it-btn del" onclick="chartDel('${c.id}')">🗑</button>
+    </div>
+  </div>`).join('');
+}
+function chartShow(id, on) {
+  const c = findChart(id), ly = c && chartLayer(c); if (!ly) return;
+  on ? ly.addTo(map) : ly.remove();   // 一覧・保存の更新は overlayadd / overlayremove で行う
+}
+function chartOpacity(id, v, save) {
+  const c = findChart(id); if (!c) return;
+  c.opacity = v / 100;
+  const ly = chartLayers.get(id); if (ly) ly.setOpacity(c.opacity);
+  if (save) dbPut('charts', c);
+}
+function chartView(id) {
+  const c = findChart(id); if (!c || !c.corners) return;
+  chartShow(id, true);
+  fitPoints([c.corners.tl, c.corners.tr, c.corners.bl, c.corners.br]);
+}
+function chartRealign(id) { const c = findChart(id); if (c && map) alignStart(c); }
+function chartRename(id) {
+  const c = findChart(id); if (!c) return;
+  askText('地図の名前', c.name, v => {
+    c.name = v; dbPut('charts', c);
+    const ly = chartLayers.get(id);
+    if (ly) { layerCtl.removeLayer(ly); layerCtl.addOverlay(ly, '🗾 ' + esc(v)); }
+    renderCharts();
+  });
+}
+function chartDel(id) {
+  const c = findChart(id); if (!c) return;
+  askConfirm('地図を削除', `「${esc(c.name)}」を削除しますか？`, '削除する', () => {
+    S.charts = S.charts.filter(x => x !== c);
+    const ly = chartLayers.get(id);
+    if (ly) { ly.remove(); layerCtl.removeLayer(ly); ly.dispose(); chartLayers.delete(id); }
+    dbDel('charts', id); renderCharts(); toast('🗑 削除しました');
+  });
+}
 
 // ============================================================
 //  THEME / SHEET / TOAST
@@ -1213,10 +1608,10 @@ function setTheme(t, silent) {
   store('fishingTheme', t);
   if (!silent) toast('🎨 テーマ変更');
 }
-let _ovOk = null;
-function openSheet(html, onOk) { $('ovBox').innerHTML = html; _ovOk = onOk || null; $('ov').classList.add('show'); }
-function closeSheet() { $('ov').classList.remove('show'); _ovOk = null; }
-function sheetOk() { const f = _ovOk; closeSheet(); if (f) f(); }
+let _ovOk = null, _ovCancel = null;   // _ovCancel = 「保存」以外で閉じたときに呼ぶ
+function openSheet(html, onOk) { $('ovBox').innerHTML = html; _ovOk = onOk || null; _ovCancel = null; $('ov').classList.add('show'); }
+function closeSheet() { $('ov').classList.remove('show'); const c = _ovCancel; _ovOk = _ovCancel = null; if (c) c(); }
+function sheetOk() { const f = _ovOk; _ovCancel = null; closeSheet(); if (f) f(); }
 function askConfirm(title, body, okLbl, fn, danger = true) {
   openSheet(`<div class="modal-title">${title}</div><div class="modal-body">${body}</div>
     <div class="modal-btns"><button class="modal-btn btn-cancel" onclick="closeSheet()">キャンセル</button>
@@ -1239,7 +1634,8 @@ async function init() {
   initMap();
   renderSettings(); renderHud(); renderStatus();
   try {
-    const [ws, ts] = await Promise.all([dbAll('wpts'), dbAll('tracks')]);
+    const [ws, ts, cs] = await Promise.all([dbAll('wpts'), dbAll('tracks'), dbAll('charts')]);
+    S.charts = cs.filter(c => c.corners).sort((a, b) => a.t - b.t);
     S.wpts = ws.sort((a, b) => a.t - b.t);
     ts.sort((a, b) => b.start - a.start);
     for (const t of ts) {
@@ -1257,13 +1653,14 @@ async function init() {
   if (!gotoWpt()) S.goto = null;
   S.wpts.forEach(mapWpt);
   S.tracks.forEach(t => { if (S.shown.has(t.id)) mapTrack(t, true); });
+  S.charts.forEach(c => { const ly = chartLayer(c); if (ly && c.show) ly.addTo(map); });
   if (S.rec) {
     const segs = S.rec.segs;
     if (!segs.length || segs[segs.length - 1].length) segs.push([]);
     mapCurReset(); keepAwake(true);
     toast('▶ 記録中だった航跡の続きを記録します');
   }
-  renderRec(); renderWpts(); renderTracks(); renderGoto();
+  renderRec(); renderWpts(); renderTracks(); renderGoto(); renderCharts();
   if (S.goto) keepAwake(true);
   startGps();
 }
